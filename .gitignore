@@ -24,6 +24,12 @@ settings.local.json
 # Banco de dados
 *.db
 
+# Tudo exceto projeto-argos
+cursos/
+*.xlsx
+*.py
+curso-sql
+
 # Arquivos temporários / SO
 *.tmp
 Thumbs.db
