@@ -1,0 +1,30 @@
+# Extensões VSCode
+extensions/
+anthropic.claude-code-*/
+devsense.*/
+golang.*/
+llvm-vs-code-extensions.*/
+meta.*/
+ms-ceintl.*/
+ms-python.*/
+redhat.*/
+shopify.*/
+vscjava.*/
+extensions.json
+.obsolete
+
+# Claude Code
+.claude/
+.claudeignore
+
+# Arquivos de configuração locais
+argv.json
+settings.local.json
+
+# Banco de dados
+*.db
+
+# Arquivos temporários / SO
+*.tmp
+Thumbs.db
+desktop.ini

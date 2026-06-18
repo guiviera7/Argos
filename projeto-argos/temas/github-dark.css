@@ -1,0 +1,22 @@
+/* Tema original: GitHub Dark */
+:root {
+  --bg: #0d1117;
+  --bg-card: #161b22;
+  --bg-hover: #1c2128;
+  --border: #30363d;
+  --border-sub: #21262d;
+  --accent: #58a6ff;
+  --accent-dim: #1a2d4a;
+  --success: #3fb950;
+  --success-dim: #122318;
+  --warning: #d29922;
+  --warning-dim: #2d2200;
+  --danger: #f85149;
+  --danger-dim: #3d1a19;
+  --text: #e6edf3;
+  --text-sec: #ffffff;
+  --text-muted: #484f58;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}

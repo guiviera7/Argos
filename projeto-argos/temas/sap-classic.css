@@ -1,0 +1,22 @@
+/* Tema SAP Classic — cores literais do SAP EWM GUI */
+:root {
+  --bg: #f4f4f4;
+  --bg-card: #ffffff;
+  --bg-hover: #e8f0fb;
+  --border: #bfbfbf;
+  --border-sub: #d9d9d9;
+  --accent: #0070d2;
+  --accent-dim: #cce0f5;
+  --success: #107e3e;
+  --success-dim: #d4edda;
+  --warning: #e8a000;
+  --warning-dim: #fff3cd;
+  --danger: #bb0000;
+  --danger-dim: #f8d7da;
+  --text: #32363a;
+  --text-sec: #32363a;
+  --text-muted: #6a6d70;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}

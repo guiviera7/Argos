@@ -1,0 +1,5675 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Argos — Estoque & Picking</title>
+  <style>
+    :root {
+      --bg: #111519;
+      --bg-card: #1c2228;
+      --bg-hover: #222c35;
+      --border: #2d3d4d;
+      --border-sub: #1e2c38;
+      --accent: #0a84ff;
+      --accent-dim: #082040;
+      --success: #30914c;
+      --success-dim: #0d2018;
+      --warning: #f0ab00;
+      --warning-dim: #2a1f00;
+      --danger: #e9420a;
+      --danger-dim: #2d1005;
+      --text: #e6edf3;
+      --text-sec: #ffffff;
+      --text-muted: #5a6e7f;
+      --radius: 8px;
+      --radius-lg: 12px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -.4px;
+    }
+
+    .logo em {
+      color: var(--text-sec);
+      font-style: normal;
+      font-weight: 400;
+      font-size: 13px;
+      margin-left: 4px;
+    }
+
+    .header-sep {
+      flex: 1;
+    }
+
+    /* ── FAMILY THRESHOLD PILLS (header) ── */
+    .fam-thresh-wrap {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .fam-thresh-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .fam-thresh-pill:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .fam-thresh-pill.editing {
+      border-color: var(--accent);
+    }
+
+    .fam-thresh-sep {
+      color: var(--text-muted);
+      font-weight: 400;
+      margin: 0 1px;
+    }
+
+    .fam-thresh-val {
+      color: var(--accent);
+      font-family: monospace;
+    }
+
+    .fam-thresh-inp {
+      width: 36px;
+      background: transparent;
+      border: none;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      outline: none;
+      padding: 0;
+      font-family: monospace;
+    }
+
+    /* ── FAMILY FILTER PILLS (PIK) ── */
+    .pik-fam-filter-wrap {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .fam-filter-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 13px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+      cursor: pointer;
+      transition: all .15s;
+      user-select: none;
+    }
+
+    .fam-filter-pill:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .fam-filter-pill.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── MAIN ── */
+    .main {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 18px 16px 40px;
+    }
+
+    /* ── DASHBOARD ── */
+    .dashboard {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 7px 16px 7px 10px;
+    }
+
+    .stat-icon {
+      font-size: 17px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .stat-body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat.blue {
+      background: rgba(26, 45, 74, .55);
+      border-color: rgba(88, 166, 255, .35);
+    }
+
+    .stat.green {
+      background: rgba(18, 35, 24, .55);
+      border-color: rgba(63, 185, 80, .35);
+    }
+
+    .stat.yellow {
+      background: rgba(45, 34, 0, .55);
+      border-color: rgba(210, 153, 34, .35);
+    }
+
+    .stat.red {
+      background: rgba(61, 26, 25, .55);
+      border-color: rgba(248, 81, 73, .35);
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-sec);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .stat-val {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+
+    .stat.blue .stat-val {
+      color: var(--accent);
+    }
+
+    .stat.green .stat-val {
+      color: var(--success);
+    }
+
+    .stat.yellow .stat-val {
+      color: var(--warning);
+    }
+
+    .stat.red .stat-val {
+      color: var(--danger);
+    }
+
+    .stat-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* ── IMPORT ── */
+    .import-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .import-card {
+      flex: 1;
+      min-width: 230px;
+      background: var(--bg-card);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+
+    .import-card:hover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .import-card.loaded {
+      border-style: solid;
+      border-color: var(--success);
+    }
+
+    .import-card.loaded:hover {
+      background: var(--success-dim);
+    }
+
+    .import-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .import-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .import-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 3px;
+    }
+
+    .import-desc {
+      font-size: 11px;
+      color: var(--text-sec);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .import-card.loaded .import-desc {
+      color: var(--success);
+    }
+
+    .import-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--bg-card);
+      border: 1px solid var(--border-sub);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      margin-bottom: 16px;
+      line-height: 1.7;
+    }
+
+    .import-hint strong {
+      color: var(--text-sec);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      padding: 9px 18px;
+      cursor: pointer;
+      color: var(--text-sec);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      font-weight: 500;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color .12s;
+    }
+
+    .tab:hover {
+      color: var(--text);
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-badge {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 1px 7px;
+      font-size: 11px;
+      color: var(--text-sec);
+    }
+
+    .tab.active .tab-badge {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    /* ── VIEW TOGGLE ── */
+    .view-toggle {
+      display: flex;
+      margin-bottom: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 3px;
+      width: fit-content;
+    }
+
+    .view-btn {
+      padding: 5px 16px;
+      border-radius: calc(var(--radius) - 2px);
+      border: none;
+      background: transparent;
+      color: var(--text-sec);
+      font-size: 12px;
+      cursor: pointer;
+      font-family: var(--font);
+      transition: all .15s;
+    }
+
+    .view-btn.active {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .view-btn:not(.active):hover {
+      color: var(--text);
+    }
+
+    /* ── FILTERS ── */
+    .filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      margin-bottom: 12px;
+    }
+
+    .fg {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .fg label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .fg select,
+    .fg input {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      outline: none;
+    }
+
+    .fg select:focus,
+    .fg input:focus {
+      border-color: var(--accent);
+    }
+
+    .fg select {
+      min-width: 120px;
+    }
+
+    .fg input[type="text"] {
+      min-width: 150px;
+    }
+
+    .fg input[type="number"] {
+      min-width: 80px;
+    }
+
+    .btn-clear {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 12px;
+      align-self: flex-end;
+      transition: all .15s;
+    }
+
+    .btn-clear:hover {
+      border-color: var(--text);
+      color: var(--text);
+    }
+
+    /* ── TABLE ── */
+    .results-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .tbl-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .tbl-scroll {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead th {
+      background: rgba(0, 0, 0, .3);
+      padding: 9px 14px;
+      text-align: left;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--text-sec);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    thead th:hover {
+      color: var(--text);
+    }
+
+    thead th.asc::after {
+      content: ' ↑';
+      color: var(--accent);
+    }
+
+    thead th.desc::after {
+      content: ' ↓';
+      color: var(--accent);
+    }
+
+    tbody td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border-sub);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: var(--bg-hover);
+    }
+
+    tbody tr.row-crit {
+      background: rgba(248, 81, 73, .07) !important;
+    }
+
+    tbody tr.row-warn {
+      background: rgba(210, 153, 34, .07) !important;
+    }
+
+    tbody tr.row-sem-end {
+      background: rgba(88, 166, 255, .06) !important;
+    }
+
+    /* ── BADGES ── */
+    .badge-deposito {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    .badge-deposito.sexp {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid rgba(88, 166, 255, .25);
+    }
+
+    .badge-deposito.almox {
+      background: rgba(63, 185, 80, .12);
+      color: var(--success);
+      border: 1px solid rgba(63, 185, 80, .25);
+    }
+
+    .badge-deposito.other {
+      background: var(--bg);
+      color: var(--text-sec);
+      border: 1px solid var(--border);
+    }
+
+    .badge-tipo {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-tipo.pes {
+      background: rgba(88, 166, 255, .1);
+      color: var(--accent);
+      border: 1px solid rgba(88, 166, 255, .2);
+    }
+
+    .badge-tipo.pik {
+      background: rgba(210, 153, 34, .1);
+      color: var(--warning);
+      border: 1px solid rgba(210, 153, 34, .2);
+    }
+
+    .badge-tipo.other {
+      background: var(--bg);
+      color: var(--text-sec);
+      border: 1px solid var(--border);
+    }
+
+    .vaga-code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      color: var(--text-sec);
+      background: var(--bg);
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border-sub);
+    }
+
+    .nivel-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+    }
+
+    .estoque-val {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .estoque-val.ok {
+      color: var(--success);
+    }
+
+    .estoque-val.warn {
+      color: var(--warning);
+    }
+
+    .estoque-val.crit {
+      color: var(--danger);
+    }
+
+    .date-ok {
+      color: var(--text-sec);
+      font-size: 12px;
+    }
+
+    .date-warn {
+      color: var(--warning);
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .date-crit {
+      color: var(--danger);
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .nome-material {
+      color: var(--text-sec);
+      font-size: 12px;
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ── PICKING GROUPS ── */
+    .alert-criticos {
+      background: var(--danger-dim);
+      border: 1px solid rgba(248, 81, 73, .3);
+      border-radius: var(--radius-lg);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .alert-criticos .alert-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .alert-criticos .alert-text {
+      font-size: 13px;
+      color: var(--danger);
+    }
+
+    .alert-criticos strong {
+      font-weight: 700;
+    }
+
+    .familia-group {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .familia-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 16px;
+      cursor: pointer;
+      user-select: none;
+      transition: background .12s;
+    }
+
+    .familia-head:hover {
+      background: var(--bg-hover);
+    }
+
+    .familia-chevron {
+      color: var(--text-muted);
+      font-size: 12px;
+      transition: transform .15s;
+    }
+
+    .familia-head.open .familia-chevron {
+      transform: rotate(90deg);
+    }
+
+    .familia-name {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .familia-pills {
+      display: flex;
+      gap: 6px;
+      margin-left: auto;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .pill.total {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+    }
+
+    .pill.crit {
+      background: var(--danger-dim);
+      border: 1px solid rgba(248, 81, 73, .3);
+      color: var(--danger);
+    }
+
+    .pill.warn {
+      background: var(--warning-dim);
+      border: 1px solid rgba(210, 153, 34, .3);
+      color: var(--warning);
+    }
+
+    .pill.ok {
+      background: var(--success-dim);
+      border: 1px solid rgba(63, 185, 80, .3);
+      color: var(--success);
+    }
+
+    .familia-body {
+      display: none;
+    }
+
+    .familia-body.open {
+      display: block;
+    }
+
+    .familia-body .tbl-scroll {
+      border-top: 1px solid var(--border-sub);
+    }
+
+    /* ── PROMPT / EMPTY ── */
+    .prompt-filtro {
+      text-align: center;
+      padding: 48px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+
+    .prompt-filtro .prompt-ico {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .prompt-filtro p {
+      font-size: 14px;
+      color: var(--text-sec);
+      margin-bottom: 4px;
+    }
+
+    .prompt-filtro small {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .empty {
+      text-align: center;
+      padding: 52px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty .empty-ico {
+      font-size: 36px;
+      margin-bottom: 12px;
+    }
+
+    .empty p {
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .empty small {
+      font-size: 12px;
+    }
+
+    /* ══════════════════════════════════════
+       MAPA VISUAL DE PORTA PALLET
+    ══════════════════════════════════════ */
+
+    /* Seção do corredor */
+    .mapa-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .mapa-section-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      transition: background .12s;
+    }
+
+    .mapa-section-head:hover {
+      background: var(--bg-hover);
+    }
+
+    .mapa-chevron {
+      color: var(--text-muted);
+      font-size: 12px;
+      transition: transform .15s;
+    }
+
+    .mapa-section-head.open .mapa-chevron {
+      transform: rotate(90deg);
+    }
+
+    .mapa-section-title {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .mapa-section-pills {
+      display: flex;
+      gap: 7px;
+      margin-left: auto;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .mapa-section-body {
+      display: none;
+      padding: 16px 18px;
+      overflow-x: auto;
+    }
+
+    .mapa-section-body.open {
+      display: block;
+    }
+
+    /* Legenda */
+    .mapa-legenda {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .legenda-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .legenda-dot {
+      display: block;
+      width: 12px;
+      height: 12px;
+      min-width: 12px;
+      max-width: 12px;
+      min-height: 12px;
+      max-height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      flex-grow: 0;
+    }
+
+    .legenda-dot.ok {
+      background: rgba(63, 185, 80, .5);
+      border: 1px solid rgba(63, 185, 80, .6);
+    }
+
+    .legenda-dot.warn {
+      background: rgba(210, 153, 34, .5);
+      border: 1px solid rgba(210, 153, 34, .6);
+    }
+
+    .legenda-dot.crit {
+      background: rgba(248, 81, 73, .5);
+      border: 1px solid rgba(248, 81, 73, .6);
+    }
+
+    .legenda-dot.empty {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+    }
+
+    /* Grade do corredor */
+    .corredor-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: max-content;
+    }
+
+    .corredor-row {
+      display: flex;
+      align-items: stretch;
+      gap: 5px;
+    }
+
+    .corredor-nivel-label {
+      width: 42px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      font-family: monospace;
+      letter-spacing: .5px;
+    }
+
+    /* Célula porta pallet */
+    .pallet-cell {
+      width: 144px;
+      min-height: 96px;
+      flex-shrink: 0;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      padding: 7px 9px;
+      display: flex;
+      flex-direction: column;
+      cursor: default;
+      position: relative;
+      transition: transform .1s, box-shadow .1s;
+    }
+
+    .pallet-cell:not(.empty):hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, .5);
+      z-index: 3;
+    }
+
+    .pallet-cell.empty {
+      background: rgba(255, 255, 255, .018);
+      border-style: dashed;
+      border-color: var(--border-sub);
+      cursor: default;
+    }
+
+    .pallet-cell.ok {
+      background: rgba(63, 185, 80, .08);
+      border-color: rgba(63, 185, 80, .28);
+    }
+
+    .pallet-cell.warn {
+      background: rgba(210, 153, 34, .1);
+      border-color: rgba(210, 153, 34, .35);
+    }
+
+    .pallet-cell.crit {
+      background: rgba(248, 81, 73, .1);
+      border-color: rgba(248, 81, 73, .35);
+    }
+
+    .pallet-cell.highlight-match {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    .pallet-pos {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-muted);
+      font-family: monospace;
+      letter-spacing: .5px;
+      margin-bottom: 3px;
+    }
+
+    .pallet-mat {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text);
+      font-family: monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pallet-nome {
+      font-size: 10px;
+      color: var(--text-sec);
+      margin-top: 2px;
+      flex: 1;
+      overflow: hidden;
+      line-height: 1.35;
+      max-height: 2.7em;
+    }
+
+    .pallet-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 6px;
+      gap: 4px;
+    }
+
+    .pallet-estoque {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    .pallet-cell.ok .pallet-estoque {
+      color: var(--success);
+    }
+
+    .pallet-cell.warn .pallet-estoque {
+      color: var(--warning);
+    }
+
+    .pallet-cell.crit .pallet-estoque {
+      color: var(--danger);
+    }
+
+    .pallet-venc {
+      font-size: 9px;
+      font-weight: 600;
+      text-align: right;
+      line-height: 1.2;
+    }
+
+    .pallet-cell.ok .pallet-venc {
+      color: rgba(63, 185, 80, .7);
+    }
+
+    .pallet-cell.warn .pallet-venc {
+      color: var(--warning);
+    }
+
+    .pallet-cell.crit .pallet-venc {
+      color: var(--danger);
+    }
+
+    .pallet-multi-badge {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 10px;
+      padding: 1px 5px;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .pallet-empty-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      text-align: center;
+      margin: auto;
+      font-style: italic;
+    }
+
+    /* Rótulos de posição no eixo X */
+    .corredor-slot-axis {
+      display: flex;
+      gap: 5px;
+      padding-left: calc(42px + 5px);
+      margin-bottom: 4px;
+    }
+
+    .corredor-slot-label {
+      width: 144px;
+      flex-shrink: 0;
+      text-align: center;
+      font-size: 9px;
+      color: var(--text-muted);
+      font-family: monospace;
+      font-weight: 600;
+    }
+
+    /* ── TOOLTIP ── */
+    .pallet-tooltip {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      min-width: 240px;
+      max-width: 320px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .6);
+      pointer-events: none;
+    }
+
+    .tt-pos {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      font-family: monospace;
+      margin-bottom: 8px;
+    }
+
+    .tt-item {
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border-sub);
+    }
+
+    .tt-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .tt-mat {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: monospace;
+      color: var(--text);
+    }
+
+    .tt-nome {
+      font-size: 11px;
+      color: var(--text-sec);
+      margin-top: 2px;
+    }
+
+    .tt-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    .tt-tag {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+    }
+
+    .tt-tag.ok {
+      color: var(--success);
+      border-color: rgba(63, 185, 80, .3);
+    }
+
+    .tt-tag.warn {
+      color: var(--warning);
+      border-color: rgba(210, 153, 34, .3);
+    }
+
+    .tt-tag.crit {
+      color: var(--danger);
+      border-color: rgba(248, 81, 73, .3);
+    }
+
+    /* ── CORAN-021 ── */
+    .coran-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .coran-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      transition: background .12s;
+    }
+
+    .coran-head:hover {
+      background: var(--bg-hover);
+    }
+
+    .coran-head.open .mapa-chevron {
+      transform: rotate(90deg);
+    }
+
+    .coran-title {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .coran-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+
+    .coran-body {
+      display: none;
+    }
+
+    .coran-body.open {
+      display: block;
+    }
+
+    /* ── MAT CARD GRID (CORAN-021 / abas especiais) ── */
+    .mat-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 10px;
+      padding: 14px 0;
+    }
+
+    .mat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      transition: border-color .15s, background .12s;
+    }
+
+    .mat-card:hover {
+      background: var(--bg-hover);
+      border-color: var(--accent);
+    }
+
+    .mat-card.ok   { border-left-color: rgba(63, 185, 80, .6); }
+    .mat-card.warn { border-left-color: rgba(210, 153, 34, .6); }
+    .mat-card.crit { border-left-color: rgba(248, 81, 73, .6); }
+    .mat-card.highlight-match { outline: 1px solid var(--accent); }
+
+    .mc-code-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .mc-code {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: monospace;
+      letter-spacing: .3px;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mc-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .mc-estoque-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 3px;
+    }
+
+    .mc-kg {
+      font-size: 13px;
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    .mc-kg.ok   { color: var(--success); }
+    .mc-kg.warn { color: var(--warning); }
+    .mc-kg.crit { color: var(--danger); }
+
+    .mc-lote-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-sec);
+    }
+
+    .mc-lote-label {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .mc-parado { margin-top: 1px; }
+
+    .mc-venc {
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .mc-venc.ok   { color: var(--success); }
+    .mc-venc.warn { color: var(--warning); }
+    .mc-venc.crit { color: var(--danger); }
+
+    .mat-card-group { margin-bottom: 16px; }
+
+    .mat-card-group-header {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 8px 0 4px;
+      border-bottom: 1px solid var(--border-sub);
+      margin-bottom: 4px;
+    }
+
+    .coran-sem-end-badge {
+      background: rgba(88, 166, 255, .1);
+      border: 1px solid rgba(88, 166, 255, .25);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    /* ── VISÃO COMPACTA ── */
+    .compact-rack {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .compact-level {
+      display: flex;
+      align-items: stretch;
+      gap: 2px;
+    }
+
+    .compact-nivel-label {
+      width: 30px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    .compact-cell {
+      flex: 1;
+      min-width: 22px;
+      height: 42px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      overflow: hidden;
+      gap: 1px;
+      position: relative;
+      transition: filter .1s, transform .1s;
+    }
+
+    .compact-cell:not(.empty):hover {
+      filter: brightness(1.4);
+      transform: scaleY(1.06);
+      z-index: 2;
+    }
+
+    .compact-cell.empty {
+      min-height: 42px;
+      background: rgba(255, 255, 255, .02);
+      border-style: dashed;
+      border-color: var(--border-sub);
+      cursor: default;
+    }
+
+    .compact-cell.ok {
+      background: rgba(63, 185, 80, .14);
+      border-color: rgba(63, 185, 80, .35);
+    }
+
+    .compact-cell.warn {
+      background: rgba(210, 153, 34, .14);
+      border-color: rgba(210, 153, 34, .35);
+    }
+
+    .compact-cell.crit {
+      background: rgba(248, 81, 73, .14);
+      border-color: rgba(248, 81, 73, .35);
+    }
+
+    .compact-cell.highlight-match {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    .compact-cell-slot {
+      font-size: 9px;
+      color: var(--text);
+      font-family: monospace;
+      font-weight: 700;
+      line-height: 1.4;
+      background: rgba(0, 0, 0, .35);
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+
+    .compact-cell-kg {
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .compact-cell.ok .compact-cell-kg {
+      color: var(--success);
+    }
+
+    .compact-cell.warn .compact-cell-kg {
+      color: var(--warning);
+    }
+
+    .compact-cell.crit .compact-cell-kg {
+      color: var(--danger);
+    }
+
+    .compact-slot-axis {
+      display: flex;
+      gap: 2px;
+      padding-left: 32px;
+      margin-bottom: 4px;
+    }
+
+    .compact-slot-label {
+      flex: 1;
+      min-width: 22px;
+      text-align: center;
+      font-size: 7px;
+      color: var(--text-muted);
+      font-family: monospace;
+      font-weight: 600;
+    }
+
+    /* ── VISÃO 3D ISO ── */
+    .iso-scene {
+      perspective: 1100px;
+      overflow-x: auto;
+      padding: 28px 24px 24px;
+    }
+
+    .iso-rack {
+      transform-style: preserve-3d;
+      transform: rotateX(28deg) rotateY(-14deg);
+      display: inline-flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .iso-level {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transform-style: preserve-3d;
+      transform: translateZ(var(--iso-z, 0px));
+    }
+
+    .iso-nivel-label {
+      width: 28px;
+      flex-shrink: 0;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      font-family: monospace;
+      text-align: right;
+      padding-right: 4px;
+    }
+
+    .iso-cell {
+      width: 52px;
+      height: 38px;
+      flex-shrink: 0;
+      border-radius: 5px;
+      border: 1px solid transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      gap: 2px;
+      transition: filter .12s;
+      backface-visibility: hidden;
+    }
+
+    .iso-cell:not(.empty):hover {
+      filter: brightness(1.5);
+    }
+
+    .iso-cell.empty {
+      background: rgba(255, 255, 255, .025);
+      border-style: dashed;
+      border-color: rgba(48, 54, 61, .6);
+      cursor: default;
+    }
+
+    .iso-cell.ok {
+      background: rgba(63, 185, 80, .18);
+      border-color: rgba(63, 185, 80, .5);
+    }
+
+    .iso-cell.warn {
+      background: rgba(210, 153, 34, .18);
+      border-color: rgba(210, 153, 34, .5);
+    }
+
+    .iso-cell.crit {
+      background: rgba(248, 81, 73, .18);
+      border-color: rgba(248, 81, 73, .5);
+    }
+
+    .iso-cell.highlight-match {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    .iso-cell-pos {
+      font-size: 7px;
+      color: var(--text-muted);
+      font-family: monospace;
+      line-height: 1;
+    }
+
+    .iso-cell-kg {
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .iso-cell.ok .iso-cell-kg {
+      color: var(--success);
+    }
+
+    .iso-cell.warn .iso-cell-kg {
+      color: var(--warning);
+    }
+
+    .iso-cell.crit .iso-cell-kg {
+      color: var(--danger);
+    }
+
+    .iso-cell.empty .iso-cell-pos {
+      color: rgba(72, 79, 88, .4);
+    }
+
+    /* Sub-toggle do mapa */
+    .mapa-sub-toggle {
+      margin-top: 6px;
+    }
+
+    /* ── MINI MAPA ── */
+    .mini-mapa-wrapper {
+      display: flex;
+      gap: 28px;
+      flex-wrap: wrap;
+      margin: 4px 0;
+    }
+
+    .mini-mapa-corredor {
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .mini-mapa-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .mini-mapa-grid-wrap {
+      display: flex;
+      align-items: flex-start;
+    }
+
+    .mini-mapa-level-labels {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      padding-top: 20px;
+    }
+
+    .mini-mapa-nivel-label {
+      height: 16px;
+      width: 26px;
+      flex-shrink: 0;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-muted);
+      font-family: monospace;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 3px;
+    }
+
+    .mini-mapa-grid {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .mini-mapa-slot-axis {
+      display: flex;
+      gap: 1px;
+      height: 16px;
+      margin-bottom: 4px;
+    }
+
+    .mini-mapa-slot-label {
+      width: 16px;
+      flex-shrink: 0;
+      height: 16px;
+      line-height: 16px;
+      text-align: center;
+      font-size: 7px;
+      color: var(--text-muted);
+      font-family: monospace;
+      overflow: hidden;
+    }
+
+    .mini-mapa-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .mini-mapa-row {
+      display: flex;
+      gap: 1px;
+    }
+
+    .mini-cell {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: transform .08s, filter .08s;
+    }
+
+    .mini-cell:not(.empty):hover {
+      transform: scale(1.5);
+      z-index: 5;
+      filter: brightness(1.3);
+    }
+
+    .mini-cell.empty {
+      background: rgba(255, 255, 255, .04);
+      border: 1px solid rgba(48, 54, 61, .4);
+      cursor: default;
+    }
+
+    .mini-cell.ok {
+      background: rgba(63, 185, 80, .55);
+    }
+
+    .mini-cell.warn {
+      background: rgba(210, 153, 34, .55);
+    }
+
+    .mini-cell.crit {
+      background: rgba(248, 81, 73, .55);
+    }
+
+    .mini-cell.highlight-match {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    /* ── VISÃO EXPANDIDA ── */
+    .expandida-rack {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .expandida-shelf-bar {
+      height: 10px;
+      background: #161c22;
+      border-top: 3px solid #2d3540;
+      display: flex;
+      align-items: center;
+      padding-left: 46px;
+      flex-shrink: 0;
+    }
+
+    .expandida-shelf-label {
+      font-size: 8px;
+      color: var(--text-muted);
+      font-family: monospace;
+      font-weight: 700;
+      padding-left: 4px;
+    }
+
+    .expandida-row {
+      display: flex;
+      flex-shrink: 0;
+    }
+
+    .expandida-nivel-label {
+      width: 42px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      font-family: monospace;
+      border-right: 4px solid #21262d;
+      background: rgba(22, 27, 34, .6);
+    }
+
+    .expandida-cells {
+      display: flex;
+    }
+
+    .expandida-cell {
+      width: 110px;
+      min-height: 72px;
+      flex-shrink: 0;
+      padding: 20px 8px 6px;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      border-right: 3px solid #21262d;
+      transition: filter .12s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .expandida-cell:not(.empty):hover {
+      filter: brightness(1.3);
+      z-index: 2;
+    }
+
+    .expandida-cell.empty {
+      background: rgba(255, 255, 255, .012);
+      cursor: default;
+    }
+
+    .expandida-cell.empty:hover {
+      filter: none;
+    }
+
+    .expandida-cell.ok {
+      background: rgba(63, 185, 80, .1);
+      border-bottom: 3px solid rgba(63, 185, 80, .6);
+    }
+
+    .expandida-cell.warn {
+      background: rgba(210, 153, 34, .12);
+      border-bottom: 3px solid rgba(210, 153, 34, .6);
+    }
+
+    .expandida-cell.crit {
+      background: rgba(248, 81, 73, .12);
+      border-bottom: 3px solid rgba(248, 81, 73, .6);
+    }
+
+    .mat-emoji {
+      position: absolute;
+      top: 3px;
+      right: 4px;
+      font-size: 14px;
+      line-height: 1;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .compact-cell .mat-emoji {
+      font-size: 9px;
+      top: 1px;
+      right: 2px;
+    }
+
+    /* ── FEFO BADGE ── */
+    .fefo-badge {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      background: rgba(255, 255, 255, .92);
+      color: #111;
+      border-radius: 3px;
+      font-size: 7px;
+      font-weight: 800;
+      padding: 0 2px;
+      line-height: 13px;
+      min-width: 13px;
+      text-align: center;
+      font-family: monospace;
+      pointer-events: none;
+      user-select: none;
+      z-index: 2;
+    }
+
+    .expandida-cell .fefo-badge {
+      font-size: 9px;
+      line-height: 15px;
+      min-width: 15px;
+      top: 3px;
+      left: 3px;
+      padding: 0 3px;
+    }
+
+    /* ── MAT HIGHLIGHT ── */
+    #estoque-content .compact-cell,
+    #estoque-content .expandida-cell,
+    #estoque-content .n1-row {
+      transition: opacity .15s;
+    }
+
+    #estoque-content.has-mat-hl .compact-cell:not(.mat-match),
+    #estoque-content.has-mat-hl .expandida-cell:not(.mat-match),
+    #estoque-content.has-mat-hl .n1-row:not(.mat-match) {
+      opacity: .25;
+    }
+
+    .mat-match {
+      outline: 2px solid rgba(255, 255, 255, .85) !important;
+      outline-offset: 1px;
+      position: relative;
+      z-index: 3;
+    }
+
+    .tt-tag.pik {
+      color: var(--warning);
+      border-color: rgba(210, 153, 34, .3);
+    }
+
+    .tt-tag.pik-none {
+      color: var(--text-muted);
+    }
+
+    .expandida-cell.highlight-match {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    .expandida-cell.focused {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+      animation: pulse-focus .5s ease 2;
+    }
+
+    @keyframes pulse-focus {
+
+      0%,
+      100% {
+        filter: brightness(1);
+      }
+
+      50% {
+        filter: brightness(1.6);
+      }
+    }
+
+    .exp-pos {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-sec);
+      font-family: monospace;
+      text-align: center;
+      background: rgba(0, 0, 0, .3);
+      border-radius: 2px;
+      padding: 0 3px;
+      display: inline-block;
+    }
+
+    .exp-nome {
+      font-size: 9px;
+      color: var(--text-sec);
+      flex: 1;
+      margin-top: 2px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+
+    .exp-kg {
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    .expandida-cell.ok .exp-kg {
+      color: var(--success);
+    }
+
+    .expandida-cell.warn .exp-kg {
+      color: var(--warning);
+    }
+
+    .expandida-cell.crit .exp-kg {
+      color: var(--danger);
+    }
+
+    .exp-days {
+      font-size: 8px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .expandida-cell.warn .exp-days {
+      color: var(--warning);
+    }
+
+    .expandida-cell.crit .exp-days {
+      color: var(--danger);
+    }
+
+    .expandida-cell.ok .exp-days {
+      color: rgba(63, 185, 80, .7);
+    }
+
+    .expandida-floor-bar {
+      height: 8px;
+      background: #161c22;
+      border-top: 3px solid #2d3540;
+      flex-shrink: 0;
+      margin-left: 42px;
+    }
+
+    .expandida-slot-axis {
+      display: flex;
+      padding-left: 46px;
+      margin-bottom: 4px;
+      min-width: max-content;
+    }
+
+    .expandida-slot-label {
+      width: 110px;
+      flex-shrink: 0;
+      text-align: center;
+      font-size: 9px;
+      color: var(--text-muted);
+      font-family: monospace;
+      font-weight: 600;
+    }
+
+    /* ── DETAIL POPUP ── */
+    .detail-popup {
+      display: none;
+      position: fixed;
+      z-index: 500;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      min-width: 260px;
+      max-width: 420px;
+      max-height: 70vh;
+      overflow-y: auto;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .7);
+      user-select: none;
+    }
+
+    .detail-popup.dragging {
+      box-shadow: 0 24px 56px rgba(0, 0, 0, .85);
+      opacity: .97;
+    }
+
+    .detail-popup.visible {
+      display: block;
+    }
+
+    .detail-popup-close {
+      flex-shrink: 0;
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      padding: 2px 6px;
+      transition: color .1s;
+    }
+
+    .detail-popup-close:hover {
+      color: var(--text);
+    }
+
+    .detail-popup-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #0d1117;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      margin: -14px -14px 12px -14px;
+      padding: 8px 8px 8px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, .07);
+      cursor: grab;
+    }
+
+    .detail-popup-header:active {
+      cursor: grabbing;
+    }
+
+    .detail-popup-header .tt-pos {
+      margin-bottom: 0;
+    }
+
+    .fefo-popup-badge {
+      background: rgba(255, 255, 255, .1);
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: 4px;
+      padding: 1px 7px;
+      font-size: 10px;
+      font-weight: 800;
+      font-family: monospace;
+      color: var(--text);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── COPY BUTTON ── */
+    .copy-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0 3px;
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1;
+      vertical-align: middle;
+      transition: color .1s;
+      flex-shrink: 0;
+      opacity: .55;
+    }
+
+    .copy-btn:hover {
+      color: var(--accent);
+      opacity: 1;
+    }
+
+    /* ── LOTE BADGE ── */
+    .tt-lote {
+      background: rgba(88, 166, 255, .07);
+      border-color: rgba(88, 166, 255, .22) !important;
+      color: var(--accent) !important;
+      font-family: monospace;
+    }
+
+    /* ── PIK MAP ── */
+    .pik-map-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .pik-cell {
+      width: 38px;
+      min-height: 50px;
+      flex-shrink: 0;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      cursor: pointer;
+      position: relative;
+      transition: filter .1s, transform .1s;
+    }
+
+    .pik-cell:not(.no-data):not(.empty-slot):hover {
+      filter: brightness(1.45);
+      transform: scale(1.08);
+      z-index: 5;
+    }
+
+    .pik-cell.no-data {
+      background: rgba(255, 255, 255, .03);
+      border-color: var(--border-sub);
+      border-style: dashed;
+      cursor: default;
+    }
+
+    .pik-cell.pik-zero {
+      background: rgba(248, 81, 73, .1);
+      border-color: rgba(248, 81, 73, .3);
+      cursor: pointer;
+    }
+
+    .pik-cell.pik-warn {
+      background: rgba(210, 153, 34, .14);
+      border-color: rgba(210, 153, 34, .38);
+      cursor: pointer;
+    }
+
+    .pik-cell.pik-ok {
+      background: rgba(63, 185, 80, .12);
+      border-color: rgba(63, 185, 80, .32);
+      cursor: pointer;
+    }
+
+    .pik-cell.pik-dim {
+      opacity: .18;
+      pointer-events: none;
+    }
+
+    .pik-cell.highlight-match {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    .pik-cell-slot {
+      font-size: 10px;
+      font-family: monospace;
+      color: var(--text-muted);
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .pik-cell-kg {
+      font-size: 10px;
+      font-weight: 800;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .pik-cell.pik-ok .pik-cell-kg {
+      color: var(--success);
+    }
+
+    .pik-cell.pik-warn .pik-cell-kg {
+      color: var(--warning);
+    }
+
+    .pik-cell.pik-zero .pik-cell-kg {
+      color: var(--danger);
+    }
+
+    .pik-row {
+      display: flex;
+      gap: 3px;
+      min-width: max-content;
+    }
+
+    .pik-axis-row {
+      display: flex;
+      gap: 3px;
+      min-width: max-content;
+    }
+
+    .pik-axis-cell {
+      width: 38px;
+      flex-shrink: 0;
+      text-align: center;
+      font-size: 7px;
+      font-family: monospace;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .pik-side-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-family: monospace;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 2px 0;
+      opacity: .65;
+    }
+
+    .pik-corredor-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+      min-width: max-content;
+    }
+
+    .pik-corredor-strip-lbl {
+      font-size: 9px;
+      color: var(--text-muted);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .pik-corredor-strip-line {
+      flex: 1;
+      height: 1px;
+      background: rgba(48, 54, 61, .9);
+      min-width: 20px;
+    }
+
+    .pik-detail-section {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-sub);
+    }
+
+    .pik-detail-title {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 6px;
+    }
+
+    .pik-pes-row {
+      display: grid;
+      grid-template-columns: auto auto 1fr auto auto;
+      gap: 6px;
+      font-size: 10px;
+      padding: 3px 0;
+      border-bottom: 1px solid var(--border-sub);
+      align-items: center;
+    }
+
+    .pik-pes-row:last-child {
+      border-bottom: none;
+    }
+
+    .pik-pes-fefo {
+      font-size: 9px;
+      font-weight: 800;
+      font-family: monospace;
+      background: rgba(255, 255, 255, .1);
+      border-radius: 2px;
+      padding: 0 3px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .pik-pes-pos {
+      font-family: monospace;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .pik-pes-lote {
+      font-family: monospace;
+      color: var(--text-sec);
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      background: rgba(255, 255, 255, .05);
+      border-radius: 3px;
+      padding: 0 4px;
+    }
+
+    .pik-thr-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .pik-thr-pill:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .pik-thr-pill.editing {
+      border-color: var(--accent);
+    }
+
+    .pik-thr-val {
+      color: var(--accent);
+      font-family: monospace;
+    }
+
+    .pik-thr-inp {
+      width: 34px;
+      background: transparent;
+      border: none;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      outline: none;
+      padding: 0;
+      font-family: monospace;
+    }
+
+    .pik-pes-kg {
+      font-weight: 700;
+      color: var(--text);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .pik-pes-days {
+      font-size: 9px;
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .pik-pes-days.ok {
+      color: var(--success);
+    }
+
+    .pik-pes-days.warn {
+      color: var(--warning);
+    }
+
+    .pik-pes-days.crit {
+      color: var(--danger);
+    }
+
+    .fefo-current-row {
+      background: rgba(255, 255, 255, .08);
+      border-radius: 3px;
+    }
+
+    .fefo-current-row .pik-pes-pos {
+      color: var(--text) !important;
+      font-weight: 800;
+    }
+
+    .pik-pes-row[data-fefo-pos] {
+      cursor: default;
+      border-radius: 3px;
+    }
+
+    .pik-pes-row[data-fefo-pos]:hover {
+      background: rgba(255, 255, 255, .05);
+    }
+
+    /* Realce sutil: vagas mencionadas numa bolha aberta */
+    .popup-mentioned {
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, .3) !important;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Realce brilhante ao hover numa linha FEFO da bolha */
+    .popup-hover-hl {
+      outline: 2px solid rgba(255, 255, 255, .92) !important;
+      outline-offset: 1px;
+      box-shadow: 0 0 12px rgba(255, 255, 255, .22) !important;
+      position: relative;
+      z-index: 4;
+      filter: brightness(1.35) !important;
+    }
+
+    /* ── N1 PRÉ-RESSUPRIMENTO ── */
+    .n1-corredor-block {
+      margin-bottom: 14px;
+    }
+
+    .n1-corredor-block:last-child {
+      margin-bottom: 0;
+    }
+
+    .n1-corredor-block-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+
+    .n1-sides {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .n1-side-header {
+      font-size: 9px;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-family: monospace;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 5px 0 3px 0;
+      opacity: .7;
+    }
+
+    .n1-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .n1-row-wrap {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .n1-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      min-height: 24px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: filter .1s;
+    }
+
+    .n1-row.expanded {
+      border-radius: 4px 4px 0 0;
+    }
+
+    .n1-row:not(.empty):hover {
+      filter: brightness(1.3);
+    }
+
+    .n1-row.ok {
+      background: rgba(63, 185, 80, .1);
+      border-color: rgba(63, 185, 80, .3);
+    }
+
+    .n1-row.warn {
+      background: rgba(210, 153, 34, .12);
+      border-color: rgba(210, 153, 34, .35);
+    }
+
+    .n1-row.crit {
+      background: rgba(248, 81, 73, .12);
+      border-color: rgba(248, 81, 73, .35);
+    }
+
+    .n1-row.highlight-match {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    .n1-row-num {
+      font-size: 9px;
+      color: var(--text-muted);
+      min-width: 14px;
+      text-align: right;
+      flex-shrink: 0;
+      font-family: monospace;
+      font-weight: 600;
+    }
+
+    .n1-row-pos {
+      font-size: 9px;
+      font-weight: 700;
+      font-family: monospace;
+      color: var(--text-muted);
+      min-width: 68px;
+      flex-shrink: 0;
+    }
+
+    .n1-row-kg {
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+      min-width: 52px;
+      text-align: right;
+    }
+
+    .n1-row.ok .n1-row-kg {
+      color: var(--success);
+    }
+
+    .n1-row.warn .n1-row-kg {
+      color: var(--warning);
+    }
+
+    .n1-row.crit .n1-row-kg {
+      color: var(--danger);
+    }
+
+    .n1-row-days {
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      min-width: 44px;
+      text-align: right;
+    }
+
+    .n1-row.warn .n1-row-days {
+      color: var(--warning);
+    }
+
+    .n1-row.crit .n1-row-days {
+      color: var(--danger);
+    }
+
+    .n1-fefo {
+      font-size: 9px;
+      font-weight: 800;
+      font-family: monospace;
+      background: rgba(255, 255, 255, .85);
+      color: #111;
+      border-radius: 2px;
+      padding: 0 3px;
+      line-height: 14px;
+      flex-shrink: 0;
+    }
+
+    /* ── N1 ACCORDION EXPAND ── */
+    .n1-expand {
+      display: none;
+      border: 1px solid var(--border-sub);
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      background: var(--bg);
+      padding: 6px 8px;
+      margin-bottom: 2px;
+    }
+
+    .n1-expand.open {
+      display: block;
+    }
+
+    .n1-expand-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border-sub);
+    }
+
+    .n1-expand-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .n1-expand-swatch {
+      width: 14px;
+      height: 14px;
+      min-width: 14px;
+      max-width: 14px;
+      min-height: 14px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .n1-expand-col {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .n1-expand-mat {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: monospace;
+      color: var(--text);
+    }
+
+    .n1-expand-nome {
+      font-size: 11px;
+      color: var(--text-sec);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .n1-expand-tags {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+
+    .n1-expand-tag {
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+    }
+
+    .n1-expand-tag.ok {
+      color: var(--success);
+      border-color: rgba(63, 185, 80, .3);
+    }
+
+    .n1-expand-tag.warn {
+      color: var(--warning);
+      border-color: rgba(210, 153, 34, .3);
+    }
+
+    .n1-expand-tag.crit {
+      color: var(--danger);
+      border-color: rgba(248, 81, 73, .3);
+    }
+
+    .n1-expand-tag.pik {
+      color: var(--warning);
+      border-color: rgba(210, 153, 34, .3);
+    }
+
+    .n1-expand-tag.pik-none {
+      color: var(--text-muted);
+      opacity: .5;
+    }
+
+    /* ── CORREDOR DOIS LADOS ── */
+    .corredor-duplo {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: max-content;
+    }
+
+    .corredor-nivel-pair {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .corredor-strip {
+      height: 14px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .corredor-strip-lbl {
+      font-size: 9px;
+      color: var(--text-muted);
+      font-weight: 600;
+      white-space: nowrap;
+      letter-spacing: .2px;
+    }
+
+    .corredor-strip-line {
+      flex: 1;
+      height: 1px;
+      background: rgba(48, 54, 61, .9);
+      min-width: 12px;
+    }
+
+    .corredor-side-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-family: monospace;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 3px 0 2px 4px;
+      opacity: .7;
+    }
+
+    /* ── COMPACT IMPORT BUTTONS ── */
+    .import-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 50px;
+      border: 1px dashed var(--border);
+      background: var(--bg-card);
+      color: var(--text-sec);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .import-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+      background: var(--accent-dim);
+    }
+
+    .import-btn.loaded {
+      border-style: solid;
+      border-color: var(--success);
+      color: var(--success);
+      background: rgba(63, 185, 80, .08);
+    }
+
+    .ib-status {
+      font-size: 10px;
+      opacity: .75;
+      font-weight: 400;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .depot-badge-tab {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: monospace;
+      margin-left: 4px;
+      vertical-align: middle;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid rgba(88, 166, 255, .3);
+    }
+
+    /* ── SEARCH AUTOCOMPLETE ── */
+    .search-suggest-wrap {
+      position: relative;
+    }
+
+    .search-suggest {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 300px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      z-index: 200;
+      margin-top: 3px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .6);
+      overflow: hidden;
+    }
+
+    .search-suggest.open {
+      display: block;
+    }
+
+    .suggest-group {
+      padding: 2px 0;
+    }
+
+    .suggest-group+.suggest-group {
+      border-top: 1px solid var(--border-sub);
+    }
+
+    .suggest-group-label {
+      padding: 5px 12px 3px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .suggest-item {
+      padding: 7px 12px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-sec);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-sub);
+    }
+
+    .suggest-item:last-child {
+      border-bottom: none;
+    }
+
+    .suggest-item:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+
+    .suggest-mat {
+      font-family: monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .suggest-nome {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .suggest-tag {
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .suggest-tag.crit {
+      background: var(--danger-dim);
+      color: var(--danger);
+      border: 1px solid rgba(248, 81, 73, .3);
+    }
+
+    .suggest-tag.low {
+      background: var(--warning-dim);
+      color: var(--warning);
+      border: 1px solid rgba(210, 153, 34, .3);
+    }
+
+    /* ── PES SUB-TABS ── */
+    .pes-subtabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 10px 0 6px;
+      margin-bottom: 2px;
+    }
+
+    .pes-subtab {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+      padding: 5px 14px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+
+    .pes-subtab:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .pes-subtab.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── SPECIAL TAB CONTROLS ── */
+    .tab-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 0 10px;
+    }
+
+    .tab-ctrl-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+      padding: 4px 11px;
+      border-radius: var(--radius);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .tab-ctrl-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .tab-ctrl-btn.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .tab-ctrl-sep {
+      color: var(--border);
+      font-size: 14px;
+    }
+
+    .tab-ctrl-select {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+      padding: 4px 8px;
+      border-radius: var(--radius);
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .tab-ctrl-select:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+
+    /* ── SOFTGEL UNITS TAG ── */
+    .softgel-un {
+      font-size: 9px;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(88, 166, 255, .07);
+      border: 1px solid rgba(88, 166, 255, .15);
+    }
+
+    .tt-tag.softgel-un {
+      font-size: 10px;
+    }
+
+    /* ── PIK VAGAS TABLE ── */
+    .pik-vagas-section {
+      margin-top: 18px;
+    }
+
+    .pik-vagas-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    .pik-vagas-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .pik-vagas-sort {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+
+    .pik-sort-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+      padding: 3px 10px;
+      border-radius: var(--radius);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .pik-sort-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .pik-sort-btn.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Grupos no modo Organizada */
+    .special-group-header {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: .5px;
+      padding: 6px 4px 3px;
+      border-top: 1px solid var(--border-sub);
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
+
+    .special-group-header:first-child {
+      border-top: none;
+      margin-top: 0;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 520px) {
+      .stat-val {
+        font-size: 15px;
+      }
+
+      .header {
+        padding: 0 12px;
+      }
+
+      .main {
+        padding: 12px 10px 32px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="pallet-tooltip" id="palletTooltip"></div>
+  <div class="detail-popup" id="detailPopup">
+    <button class="detail-popup-close" onclick="closeDetailPopup()">✕</button>
+    <div id="detailPopupBody"></div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo">Argos</div>
+    <label class="import-btn" id="cardEstoque" for="fileEstoque">📦 PES<span class="ib-status"
+        id="descEstoque"></span></label>
+    <label class="import-btn" id="cardPicking" for="filePicking">🏷️ PIK<span class="ib-status"
+        id="descPicking"></span></label>
+    <input type="file" id="fileEstoque" accept=".csv,.txt">
+    <input type="file" id="filePicking" accept=".csv,.txt">
+    <div class="header-sep"></div>
+    <div class="fam-thresh-wrap" id="famThreshWrap" style="display:none"></div>
+  </header>
+
+  <main class="main">
+
+    <!-- DASHBOARD + IMPORT INLINE -->
+    <section class="dashboard">
+      <div class="stat blue">
+        <div class="stat-icon">📦</div>
+        <div class="stat-body">
+          <div class="stat-label">Materiais PES</div>
+          <div class="stat-val" id="d-total-mat">—</div>
+          <div class="stat-sub" id="d-total-mat-sub">Aguardando importação</div>
+        </div>
+      </div>
+      <div class="stat green">
+        <div class="stat-icon">📍</div>
+        <div class="stat-body">
+          <div class="stat-label">Posições PES</div>
+          <div class="stat-val" id="d-vagas">—</div>
+          <div class="stat-sub" id="d-vagas-sub">No estoque</div>
+        </div>
+      </div>
+      <div class="stat yellow">
+        <div class="stat-icon">🏷️</div>
+        <div class="stat-body">
+          <div class="stat-label">Itens PIK</div>
+          <div class="stat-val" id="d-picking">—</div>
+          <div class="stat-sub" id="d-picking-sub">Aguardando importação</div>
+        </div>
+      </div>
+      <div class="stat red">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-body">
+          <div class="stat-label">Vagas Críticas PIK</div>
+          <div class="stat-val" id="d-criticas">—</div>
+          <div class="stat-sub" id="d-criticas-sub">No picking</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" data-tab="estoque" onclick="switchTab('estoque')">
+        Estoque PES <span class="tab-badge" id="badge-estoque">0</span><span id="badge-deposito-tab"></span>
+      </div>
+      <div class="tab" data-tab="picking" onclick="switchTab('picking')">
+        Picking PIK <span class="tab-badge" id="badge-picking">0</span>
+      </div>
+    </div>
+
+    <!-- TAB: ESTOQUE PES -->
+    <div class="tab-pane active" id="pane-estoque">
+
+      <!-- Sub-tabs dinâmicas (JK / CORAN-021 / AJUSTE / outras) -->
+      <div id="pes-subtabs" class="pes-subtabs"></div>
+
+      <!-- Toggle de visualização (só visível na aba JK) -->
+      <div class="view-toggle mapa-sub-toggle" id="mapa-view-toggle">
+        <button class="view-btn" id="btn-mapa-preress" onclick="setMapaView('preress')">📋 Pré-Ressuprimento</button>
+        <button class="view-btn active" id="btn-mapa-compacta" onclick="setMapaView('compacta')">▦ Compacta</button>
+        <button class="view-btn" id="btn-mapa-expandida" onclick="setMapaView('expandida')">▤ Expandida</button>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filters" id="pes-filters">
+        <div class="fg">
+          <label>Vencimento</label>
+          <select id="f-vencimento" onchange="renderPesView()">
+            <option value="">Todos</option>
+            <option value="proximos">Próximos 30 dias</option>
+            <option value="vencidos">Vencidos</option>
+          </select>
+        </div>
+        <div class="fg search-suggest-wrap">
+          <label>Material / Nome</label>
+          <input type="text" id="f-material" placeholder="Buscar..." oninput="_dRenderPes();_dSuggest(this.value)"
+            onfocus="renderSuggest(this.value)" onblur="closeSuggest()">
+          <div class="search-suggest" id="suggestDropdown"></div>
+        </div>
+        <button class="btn-clear" onclick="clearEstoqueFilters()">Limpar</button>
+      </div>
+
+      <div class="results-meta" id="meta-estoque"></div>
+      <div id="estoque-content"></div>
+    </div>
+
+    <!-- TAB: PICKING PIK -->
+    <div class="tab-pane" id="pane-picking">
+      <!-- PIK Sub-tabs -->
+      <div class="pes-subtabs" id="pik-subtabs" style="margin-top:6px">
+        <button class="pes-subtab active" id="pik-tab-corredores"
+          onclick="setPikSubtab('corredores')">Corredores</button>
+        <button class="pes-subtab" id="pik-tab-planejamento"
+          onclick="setPikSubtab('planejamento')">Planejamento</button>
+      </div>
+      <!-- Pane: Planejamento -->
+      <div id="pik-pane-planejamento" style="display:none">
+        <div class="prompt-filtro">
+          <div class="prompt-ico">📋</div>
+          <p>Área de Planejamento</p>
+          <small>Em desenvolvimento.</small>
+        </div>
+      </div>
+      <!-- Pane: Corredores -->
+      <div id="pik-pane-corredores">
+        <div class="pik-fam-filter-wrap" id="pikFamFilterWrap"></div>
+        <div id="picking-content">
+          <div class="prompt-filtro">
+            <div class="prompt-ico">🏷️</div>
+            <p>Nenhum dado de picking importado.</p>
+            <small>Importe o CSV do PIK acima.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    /* ═══════════════════════════════════════════════════
+     * STATE
+     * ═══════════════════════════════════════════════════ */
+    const state = {
+      estoque: [],
+      picking: [],
+      familyThresholds: { tint: 10, aroma: 10, sg150: 10, sg360: 10, sg900: 10, po: 10, corante: 10 },
+      corredorThresholds: {},
+      pikFamilyFilter: new Set(),
+      mapaView: 'compacta',
+      expandedFocus: null,
+      pesSubtab: 'jk',
+      pesTabSort: 'mais_velho',
+      pesTabModo: 'normal',
+      pesTabFiltroVenc: '',
+      pikVagasSort: { col: 'posicao', dir: 'asc' },
+    };
+
+    /* ═══════════════════════════════════════════════════
+     * UTILS
+     * ═══════════════════════════════════════════════════ */
+    function normStr(s) {
+      return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    }
+    function esc(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function fmt(n) {
+      if (n === null || n === undefined) return '—';
+      if (Number.isInteger(n)) return n.toLocaleString('pt-BR');
+      return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+    }
+    function numVal(v) {
+      if (v === null || v === undefined || v === '') return 0;
+      return parseFloat(String(v).replace(',', '.')) || 0;
+    }
+    function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+    function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+    const _pikByMaterial = new Map();
+    const _matInfoCache = new Map();
+    const _posDataMap = new Map();
+    let _suggestCrit = [], _suggestLow = [];
+    let _ttVisible = false;
+    const _dRenderPes = debounce(() => renderPesView(), 150);
+    const _dRenderPik = debounce(() => renderPicking(), 150);
+    const _dSuggest = debounce((v) => renderSuggest(v), 120);
+    let _fefoCache = null, _fefoDirty = true;
+
+    /* ═══════════════════════════════════════════════════
+     * CSV PARSING
+     * ═══════════════════════════════════════════════════ */
+    function detectSep(text) {
+      const line = text.split('\n')[0];
+      return (line.split(';').length > line.split(',').length) ? ';' : ',';
+    }
+    function parseCSVLine(line, sep) {
+      const vals = []; let cur = '', inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') { inQ = !inQ; continue; }
+        if (c === sep && !inQ) { vals.push(cur); cur = ''; } else cur += c;
+      }
+      vals.push(cur); return vals;
+    }
+    function findHeaderRow(lines) {
+      for (let i = 0; i < Math.min(8, lines.length); i++) {
+        if (normStr(lines[i]).includes('material')) return i;
+      }
+      return 0;
+    }
+    function parseCSV(text) {
+      const sep = detectSep(text);
+      const lines = text.trim().split(/\r?\n/);
+      const hIdx = findHeaderRow(lines);
+      const headers = parseCSVLine(lines[hIdx], sep).map(h => h.trim());
+      return lines.slice(hIdx + 1).filter(l => l.trim()).map(line => {
+        const vals = parseCSVLine(line, sep);
+        const raw = {};
+        headers.forEach((h, i) => { raw[h] = (vals[i] || '').trim(); });
+        return normalizeRow(raw);
+      }).filter(r => r.material);
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * NORMALIZAÇÃO DE COLUNAS SAP
+     * ═══════════════════════════════════════════════════ */
+    function normalizeRow(raw) {
+      const nr = {};
+      for (const [k, v] of Object.entries(raw)) nr[normStr(k)] = v;
+      const lookup = alts => { for (const a of alts) { const v = nr[a]; if (v !== undefined && v !== '') return v; } return ''; };
+      const posicao = lookup(['posicao no deposito', 'posicao no dep.', 'posicao']);
+      const parsedPos = parsePos(posicao);
+      const _mat = lookup(['material']).replace(/^'/, '');
+      const _lote = lookup(['lote', 'lotes']).replace(/^'/, '');
+      const _nome = lookup(['texto breve material', 'texto breve do material', 'texto breve']);
+      return {
+        material: _mat,
+        lote: _lote,
+        nome: _nome,
+        tipo_deposito: lookup(['tipo de deposito', 'tipo deposito']),
+        posicao,
+        nivel: parsedPos ? parsedPos.nivel : extractNivelSimple(posicao),
+        corredor: parsedPos ? parsedPos.letra : extractCorredor(posicao),
+        slot: parsedPos ? parsedPos.slot : 0,
+        nivelStr: parsedPos ? parsedPos.nivelStr : '',
+        slotStr: parsedPos ? parsedPos.slotStr : '',
+        estoque: numVal(lookup(['estoque disponivel', 'estoque disp.', 'estoque'])),
+        deposito: lookup(['deposito']),
+        data_entrada: parseDate(lookup(['data da entrada de mercadorias', 'data entrada de mercadorias', 'data entrada'])),
+        data_vencimento: parseDate(lookup(['data do vencimento', 'data vencimento'])),
+        _normSearch: normStr(_mat + ' ' + _nome + ' ' + _lote),
+        _normPosicao: normStr(posicao),
+      };
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * PARSING DE POSIÇÃO: LETRA-NIVEL-SLOT  (ex: J-01-003)
+     * ═══════════════════════════════════════════════════ */
+    function parsePos(posicao) {
+      if (!posicao) return null;
+      const m = posicao.match(/^([A-Za-z]+)-(\d+)-(\d+)$/);
+      if (!m) return null;
+      return {
+        letra: m[1].toUpperCase(),
+        nivel: parseInt(m[2], 10),
+        slot: parseInt(m[3], 10),
+        nivelStr: m[2],
+        slotStr: m[3],
+      };
+    }
+    function extractNivelSimple(posicao) {
+      if (!posicao) return '';
+      const parts = posicao.split('-');
+      if (parts.length < 3) return '';
+      const v = parseInt(parts[parts.length - 1], 10);
+      return isNaN(v) ? '' : v;
+    }
+    function extractCorredor(posicao) {
+      if (!posicao) return '(Sem posição)';
+      return posicao.split('-')[0] || '(Sem posição)';
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * DATAS
+     * ═══════════════════════════════════════════════════ */
+    function parseDate(s) {
+      if (!s) return null; s = s.trim();
+      let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+      m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+      m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+      if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+      return null;
+    }
+    function fmtDate(d) { return d ? d.toLocaleDateString('pt-BR') : '—'; }
+    function daysUntil(d) {
+      if (!d) return null;
+      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+      return Math.floor((d - hoje) / 86400000);
+    }
+    function daysAgo(d) {
+      if (!d) return null;
+      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+      return Math.floor((hoje - d) / 86400000);
+    }
+    function vencClass(d) {
+      const days = daysUntil(d);
+      if (days === null) return 'date-ok';
+      if (days < 0) return 'date-crit';
+      if (days <= 30) return 'date-warn';
+      return 'date-ok';
+    }
+    function rowVencClass(d) {
+      const days = daysUntil(d);
+      if (days === null) return '';
+      if (days < 0) return 'row-crit';
+      if (days <= 30) return 'row-warn';
+      return '';
+    }
+
+    /* Status de uma lista de rows (para a célula do mapa) */
+    function rowsStatus(rows) {
+      if (!rows || !rows.length) return 'empty';
+      let hasCrit = false, hasWarn = false;
+      for (const r of rows) {
+        const days = daysUntil(r.data_vencimento);
+        if (r.estoque <= 0) { hasCrit = true; break; }
+        if (days !== null && days < 0) { hasCrit = true; break; }
+        if (days !== null && days <= 30) hasWarn = true;
+      }
+      if (hasCrit) return 'crit';
+      if (hasWarn) return 'warn';
+      return 'ok';
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * BADGES HTML
+     * ═══════════════════════════════════════════════════ */
+    function badgeDeposito(dep) {
+      const cls = dep === 'SEXP' ? 'sexp' : dep === 'ALMOX' ? 'almox' : 'other';
+      return dep ? `<span class="badge-deposito ${cls}">${esc(dep)}</span>` : '—';
+    }
+    function badgeTipo(tipo) {
+      const t = (tipo || '').toUpperCase();
+      const cls = t === 'PES' ? 'pes' : t === 'PIK' ? 'pik' : 'other';
+      return tipo ? `<span class="badge-tipo ${cls}">${esc(tipo)}</span>` : '—';
+    }
+    function estoqueClass(v, material) {
+      const threshold = getFamilyThreshold(material);
+      if (v <= threshold) return 'estoque-val crit';
+      if (v <= threshold * 2) return 'estoque-val warn';
+      return 'estoque-val ok';
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * FAMÍLIAS & UNIDADES POR CÓDIGO
+     * ═══════════════════════════════════════════════════ */
+    const UNIT_PESOS = {
+      '584': 0.150, '700': 0.360, '751': 0.900,
+      '593': 0.144, '787': 0.060, '670': 0.036,
+      '596': 0.120, '349': 0.500,
+    };
+    const AROMA_PESOS = {
+      'TORTA DE LIMAO': 0.412, 'PIPOCA CARAMELIZADA': 0.336,
+      'FRUTAS VERMELHAS': 0.406, 'DOCE DE LEITE': 0.414,
+      'LEITE CONDENSADO': 0.414, 'LICOR DE CREME': 0.410,
+      'MILHO VERDE': 0.372, 'PAO DE MEL': 0.406,
+      'CARAMELO': 0.415, 'PISTACHE': 0.415,
+      'CACHACA': 0.410, 'LARANJA': 0.414,
+      'AVELA': 0.406, 'MENTA': 0.446,
+      'WHISKY': 0.410, 'TRUFA': 0.388,
+      'LIMAO': 0.388, 'CAFE': 0.403,
+    };
+    // Ordenado por tamanho do nome (maior primeiro) para evitar match parcial
+    const AROMA_PESOS_SORTED = Object.entries(AROMA_PESOS).sort((a, b) => b[0].length - a[0].length);
+    const AROMA_DEFAULT = 0.360;
+
+    const FAMILY_DEFS = [
+      { key: 'tint', label: 'Tint', suffixes: ['593'] },
+      { key: 'aroma', label: 'Aroma', suffixes: ['595'] },
+      { key: 'sg150', label: 'Softgel 150', suffixes: ['584'] },
+      { key: 'sg360', label: 'Softgel 360', suffixes: ['700'] },
+      { key: 'sg900', label: 'Softgel 900', suffixes: ['751'] },
+      { key: 'po', label: 'Pós', suffixes: ['787', '670', '349'] },
+      { key: 'corante', label: 'Corantes Líq.', suffixes: ['596'] },
+    ];
+
+    function getMaterialFamily(material) {
+      const suffix = String(material || '').slice(-3);
+      for (const f of FAMILY_DEFS) { if (f.suffixes.includes(suffix)) return f.key; }
+      return null;
+    }
+    function getFamilyThreshold(material) {
+      const fk = getMaterialFamily(material);
+      return fk ? (state.familyThresholds[fk] ?? 10) : 10;
+    }
+    function getCorredorThreshold(corridorId) {
+      return state.corredorThresholds[corridorId] ?? 12;
+    }
+    function editCorredorThresh(corridorId, el) {
+      if (el.classList.contains('editing')) return;
+      el.classList.add('editing');
+      const valEl = el.querySelector('.pik-thr-val');
+      const cur = getCorredorThreshold(corridorId);
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.min = 0; inp.step = 0.5; inp.value = cur;
+      inp.className = 'pik-thr-inp';
+      valEl.replaceWith(inp);
+      inp.focus(); inp.select();
+      const commit = () => {
+        el.classList.remove('editing');
+        const v = Math.max(0, parseFloat(inp.value) || 0);
+        state.corredorThresholds[corridorId] = v;
+        const span = document.createElement('span');
+        span.className = 'pik-thr-val'; span.textContent = v;
+        inp.replaceWith(span);
+        renderPicking();
+      };
+      inp.addEventListener('blur', commit);
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') inp.blur();
+        if (e.key === 'Escape') {
+          el.classList.remove('editing');
+          const span = document.createElement('span');
+          span.className = 'pik-thr-val'; span.textContent = cur;
+          inp.replaceWith(span);
+        }
+      });
+    }
+
+    function calcUnidades(material, nome, estoqueKg) {
+      const sufixo = String(material || '').slice(-3);
+      if (!sufixo || estoqueKg == null || estoqueKg <= 0) return null;
+      let peso;
+      if (sufixo === '595') {
+        const nomeNorm = normStr(nome || '');
+        let found = null;
+        for (const [aroma, p] of AROMA_PESOS_SORTED) {
+          if (nomeNorm.includes(normStr(aroma))) { found = p; break; }
+        }
+        peso = found !== null ? found : AROMA_DEFAULT;
+      } else {
+        peso = UNIT_PESOS[sufixo];
+      }
+      if (!peso) return null;
+      return Math.floor(estoqueKg / peso);
+    }
+    function softgelTag(material, nome, estoqueKg, cls) {
+      const un = calcUnidades(material, nome, estoqueKg);
+      if (un === null) return '';
+      return `<span class="tt-tag softgel-un${cls ? ' ' + cls : ''}">≈ ${un.toLocaleString('pt-BR')} un</span>`;
+    }
+    // Compat legado (sem nome)
+    function softgelUnidades(material, estoqueKg) { return calcUnidades(material, '', estoqueKg); }
+
+    /* ═══════════════════════════════════════════════════
+     * TOOLTIP DO MAPA
+     * ═══════════════════════════════════════════════════ */
+    const _tt = document.getElementById('palletTooltip');
+
+    function showTooltip(e, posicao, rows) {
+      const itemsHtml = rows.map(r => {
+        const days = daysUntil(r.data_vencimento);
+        let vencTag = '';
+        if (days !== null) {
+          const cls = days < 0 ? 'crit' : days <= 30 ? 'warn' : 'ok';
+          const label = days < 0
+            ? `Vencido há ${Math.abs(days)}d`
+            : days === 0 ? 'Vence hoje'
+              : `Vence em ${days}d`;
+          vencTag = `<span class="tt-tag ${cls}">${label} (${fmtDate(r.data_vencimento)})</span>`;
+        }
+        return `<div class="tt-item">
+      <div class="tt-mat">${esc(r.material)}</div>
+      <div class="tt-nome">${esc(r.nome)}</div>
+      <div class="tt-row">
+        <span class="tt-tag">Lote: ${esc(r.lote || '—')}</span>
+        <span class="tt-tag">${fmt(r.estoque)} kg</span>
+        ${vencTag}
+      </div>
+    </div>`;
+      }).join('');
+      _tt.innerHTML = `<div class="tt-pos">${esc(posicao)}</div>${itemsHtml}`;
+      _showTT();
+      moveTooltip(e);
+    }
+
+    function showPesTooltip(e, posicao, rows) {
+      const total = rows.reduce((s, r) => s + (r.estoque || 0), 0);
+      const itemsHtml = rows.map(r => {
+        const d = r.data_vencimento ? new Date(r.data_vencimento) : null;
+        const days = daysUntil(d);
+        let vencTag = '';
+        if (days !== null) {
+          const cls = days < 0 ? 'crit' : days <= 30 ? 'warn' : 'ok';
+          const label = days < 0 ? `Vencido há ${Math.abs(days)}d` : days === 0 ? 'Vence hoje' : `Vence em ${days}d`;
+          vencTag = `<span class="tt-tag ${cls}">${label} (${fmtDate(d)})</span>`;
+        }
+        const pikData = getPikInfo(r.material);
+        const pikTag = pikTagHtml(pikData, 'tt-tag');
+        return `<div class="tt-item">
+      <div class="tt-mat">${esc(r.material)}</div>
+      <div class="tt-nome">${esc(r.nome)}</div>
+      <div class="tt-row">
+        <span class="tt-tag">Lote: ${esc(r.lote || '—')}</span>
+        <span class="tt-tag">${fmt(r.estoque)} kg</span>
+        ${softgelTag(r.material, r.nome, r.estoque, 'tt-tag')}
+        ${vencTag}
+      </div>
+      <div class="tt-row">${pikTag}</div>
+    </div>`;
+      }).join('');
+      _tt.innerHTML = `<div class="tt-pos">${esc(posicao)}</div>
+    ${rows.length > 1 ? `<div style="font-size:10px;color:var(--warning);margin-bottom:4px;font-weight:700">Total: ${fmt(total)} kg</div>` : ''}
+    ${itemsHtml}`;
+      _showTT();
+      moveTooltip(e);
+    }
+    function moveTooltip(e) {
+      if (!_ttVisible) return;
+      let x = e.clientX + 14, y = e.clientY + 14;
+      const w = _tt.offsetWidth || 260, h = _tt.offsetHeight || 150;
+      if (x + w > window.innerWidth - 10) x = e.clientX - w - 10;
+      if (y + h > window.innerHeight - 10) y = e.clientY - h - 10;
+      _tt.style.left = x + 'px'; _tt.style.top = y + 'px';
+    }
+    function hideTooltip() { _ttVisible = false; _tt.style.display = 'none'; }
+    function _showTT() { _ttVisible = true; _tt.style.display = 'block'; }
+    document.addEventListener('mousemove', moveTooltip, { passive: true });
+
+    /* ═══════════════════════════════════════════════════
+     * FILE HANDLERS
+     * ═══════════════════════════════════════════════════ */
+    document.getElementById('fileEstoque').addEventListener('change', function (e) {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        state.estoque = parseCSV(ev.target.result);
+        _fefoDirty = true;
+        _rebuildSuggestCache();
+        document.getElementById('cardEstoque').classList.add('loaded');
+        document.getElementById('descEstoque').textContent = `${file.name} — ${state.estoque.length} registro(s)`;
+        populateEstoqueDropdowns();
+        renderAll();
+      };
+      reader.readAsText(file, 'UTF-8'); e.target.value = '';
+    });
+
+    document.getElementById('filePicking').addEventListener('change', function (e) {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        state.picking = parseCSV(ev.target.result);
+        _pikByMaterial.clear(); _matInfoCache.clear();
+        state.picking.forEach(r => {
+          if (!_pikByMaterial.has(r.material)) _pikByMaterial.set(r.material, []);
+          _pikByMaterial.get(r.material).push(r);
+        });
+        _rebuildSuggestCache();
+        document.getElementById('cardPicking').classList.add('loaded');
+        document.getElementById('descPicking').textContent = `${file.name} — ${state.picking.length} registro(s)`;
+        populatePickingDropdowns();
+        renderAll();
+      };
+      reader.readAsText(file, 'UTF-8'); e.target.value = '';
+    });
+
+    /* ── Family threshold pills ── */
+    function renderFamThreshPills() {
+      const wrap = document.getElementById('famThreshWrap');
+      if (!wrap) return;
+      wrap.innerHTML = FAMILY_DEFS.map(f => {
+        const thr = state.familyThresholds[f.key];
+        return `<div class="fam-thresh-pill" data-fkey="${f.key}" onclick="editFamThresh('${f.key}',this)">
+      <span>${f.label}</span>
+      <span class="fam-thresh-sep">≤</span>
+      <span class="fam-thresh-val" id="ftv-${f.key}">${thr}</span><span style="color:var(--text-muted)">kg</span>
+    </div>`;
+      }).join('');
+    }
+    function editFamThresh(key, el) {
+      if (el.classList.contains('editing')) return;
+      el.classList.add('editing');
+      const valEl = el.querySelector('.fam-thresh-val');
+      const cur = state.familyThresholds[key];
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.min = 0; inp.step = 0.1; inp.value = cur;
+      inp.className = 'fam-thresh-inp';
+      valEl.replaceWith(inp);
+      inp.focus(); inp.select();
+      const commit = () => {
+        el.classList.remove('editing');
+        const v = Math.max(0, parseFloat(inp.value) || 0);
+        state.familyThresholds[key] = v;
+        const span = document.createElement('span');
+        span.className = 'fam-thresh-val'; span.id = 'ftv-' + key; span.textContent = v;
+        inp.replaceWith(span);
+        renderAll();
+      };
+      inp.addEventListener('blur', commit);
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') inp.blur();
+        if (e.key === 'Escape') {
+          el.classList.remove('editing');
+          const span = document.createElement('span');
+          span.className = 'fam-thresh-val'; span.id = 'ftv-' + key; span.textContent = cur;
+          inp.replaceWith(span);
+        }
+      });
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * DROPDOWNS
+     * ═══════════════════════════════════════════════════ */
+    function uniqueSorted(arr) {
+      return [...new Set(arr.filter(v => v !== '' && v !== null && v !== undefined))].sort((a, b) => {
+        if (typeof a === 'number' && typeof b === 'number') return a - b;
+        return String(a).localeCompare(String(b));
+      });
+    }
+    function fillSelect(id, values) {
+      const sel = document.getElementById(id);
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">Todos</option>';
+      values.forEach(v => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        if (String(v) === String(cur)) o.selected = true;
+        sel.appendChild(o);
+      });
+    }
+    function populateEstoqueDropdowns() { /* nível não mais exibido na view mapa */ }
+    function populatePickingDropdowns() { /* nivel não usado no mapa PIK */ }
+
+    /* ═══════════════════════════════════════════════════
+     * DASHBOARD
+     * ═══════════════════════════════════════════════════ */
+    function renderDashboard() {
+      const { estoque, picking } = state;
+      const uniqueMat = new Set(estoque.map(r => r.material).filter(Boolean)).size;
+      const uniquePos = new Set(estoque.map(r => r.posicao).filter(Boolean)).size;
+      const pikTotais = {};
+      const pikMats = {};
+      picking.forEach(r => {
+        pikTotais[r.posicao] = (pikTotais[r.posicao] || 0) + (r.estoque || 0);
+        if (!pikMats[r.posicao]) pikMats[r.posicao] = r.material;
+      });
+      const criticas = Object.entries(pikTotais).filter(([pos, t]) => {
+        const thr = getFamilyThreshold(pikMats[pos]);
+        return t <= thr && t >= 0;
+      }).length;
+      set('d-total-mat', uniqueMat || '—');
+      set('d-total-mat-sub', estoque.length ? `${estoque.length} registros` : 'Aguardando importação');
+      set('d-vagas', uniquePos || '—');
+      set('d-vagas-sub', uniquePos ? 'posições únicas' : 'No estoque');
+      set('d-picking', picking.length || '—');
+      set('d-picking-sub', picking.length ? `${picking.length} registros` : 'Aguardando importação');
+      set('d-criticas', criticas || (picking.length ? '0' : '—'));
+      set('d-criticas-sub', picking.length ? 'por família' : 'No picking');
+      set('badge-estoque', estoque.length);
+      set('badge-picking', picking.length);
+      const depots = uniqueSorted(estoque.map(r => r.deposito));
+      const depEl = document.getElementById('badge-deposito-tab');
+      if (depEl) depEl.innerHTML = depots.map(d => `<span class="depot-badge-tab">${esc(d)}</span>`).join('');
+      renderFamThreshPills();
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * VIEW TOGGLE PES
+     * ═══════════════════════════════════════════════════ */
+    function setMapaView(view) {
+      state.mapaView = view;
+      if (view !== 'expandida') state.expandedFocus = null;
+      ['preress', 'compacta', 'expandida'].forEach(v =>
+        document.getElementById(`btn-mapa-${v}`).classList.toggle('active', v === view)
+      );
+      renderMapaPES();
+    }
+    function renderPesView() { renderMapaPES(); }
+
+    /* ═══════════════════════════════════════════════════
+     * ESTOQUE PES — FILTROS DO MAPA
+     * ═══════════════════════════════════════════════════ */
+    function getEstoqueFilters() {
+      return {
+        vencimento: document.getElementById('f-vencimento').value,
+        material: document.getElementById('f-material').value.trim().toLowerCase(),
+      };
+    }
+    function clearEstoqueFilters() {
+      document.getElementById('f-vencimento').value = '';
+      document.getElementById('f-material').value = '';
+      renderPesView();
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * AUTOCOMPLETE — MATERIAL / NOME
+     * ═══════════════════════════════════════════════════ */
+    function _rebuildSuggestCache() {
+      const today = new Date();
+      const critSeen = new Set(), lowSeen = new Set();
+      _suggestCrit = []; _suggestLow = [];
+      state.estoque.forEach(r => {
+        if (critSeen.has(r.material)) return;
+        const d = r.data_vencimento;
+        if (!d) return;
+        const days = Math.floor((d - today) / 86400000);
+        if (days <= 30) { critSeen.add(r.material); _suggestCrit.push({ material: r.material, nome: r.nome, days, _norm: r._normSearch }); }
+      });
+      _suggestCrit.sort((a, b) => a.days - b.days);
+      state.picking.forEach(r => {
+        if (lowSeen.has(r.material)) return;
+        if (r.estoque <= state.threshold && r.estoque >= 0) {
+          lowSeen.add(r.material);
+          if (!critSeen.has(r.material)) _suggestLow.push({ material: r.material, nome: r.nome, _norm: r._normSearch });
+        }
+      });
+    }
+    function renderSuggest(query) {
+      const wrap = document.getElementById('suggestDropdown');
+      if (!wrap || !state.estoque.length) { wrap && wrap.classList.remove('open'); return; }
+
+      const q = normStr(query);
+      const match = item => !q || item._norm.includes(q);
+      const fc = _suggestCrit.filter(match).slice(0, 6);
+      const fl = _suggestLow.filter(match).slice(0, 6);
+
+      if (!fc.length && !fl.length) { wrap.classList.remove('open'); return; }
+
+      let html = '';
+      if (fc.length) {
+        html += `<div class="suggest-group"><div class="suggest-group-label">⚠️ Críticos</div>`;
+        fc.forEach(item => {
+          const label = item.days < 0 ? `vencido ${Math.abs(item.days)}d` : `vence ${item.days}d`;
+          html += `<div class="suggest-item" onmousedown="selectSuggest(${JSON.stringify(item.material)})">
+        <span class="suggest-mat">${esc(item.material)}</span>
+        <span class="suggest-nome">${esc(item.nome)}</span>
+        <span class="suggest-tag crit">${label}</span>
+      </div>`;
+        });
+        html += '</div>';
+      }
+      if (fl.length) {
+        html += `<div class="suggest-group"><div class="suggest-group-label">📉 Estoque baixo</div>`;
+        fl.forEach(item => {
+          html += `<div class="suggest-item" onmousedown="selectSuggest(${JSON.stringify(item.material)})">
+        <span class="suggest-mat">${esc(item.material)}</span>
+        <span class="suggest-nome">${esc(item.nome)}</span>
+        <span class="suggest-tag low">PIK baixo</span>
+      </div>`;
+        });
+        html += '</div>';
+      }
+      wrap.innerHTML = html;
+      wrap.classList.add('open');
+    }
+    function selectSuggest(material) {
+      const inp = document.getElementById('f-material');
+      if (inp) inp.value = material;
+      document.getElementById('suggestDropdown').classList.remove('open');
+      renderPesView();
+    }
+    function closeSuggest() {
+      setTimeout(() => {
+        const w = document.getElementById('suggestDropdown');
+        if (w) w.classList.remove('open');
+      }, 150);
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * MAPA VISUAL PES
+     * ═══════════════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════════════
+     * PES SUB-TABS
+     * ═══════════════════════════════════════════════════ */
+    const FIXED_PES_CORREDORES = new Set(['J', 'K']);
+    const FIXED_PES_POSITIONS = new Set(['CORAN-021', 'AJUSTE']);
+
+    function buildPesSubtabs() {
+      const tabsEl = document.getElementById('pes-subtabs');
+      if (!tabsEl) return;
+      // Detectar posições dinâmicas (não J, K, CORAN-021, AJUSTE)
+      const outras = [...new Set(
+        state.estoque
+          .filter(r => !FIXED_PES_CORREDORES.has(r.corredor) && !FIXED_PES_POSITIONS.has(r.posicao))
+          .map(r => r.posicao)
+          .filter(Boolean)
+      )].sort();
+      const hasCoran = state.estoque.some(r => r.posicao === 'CORAN-021');
+      const hasAjuste = state.estoque.some(r => r.posicao === 'AJUSTE');
+      let tabs = [{ id: 'jk', label: 'Corredores J/K' }];
+      if (hasCoran) tabs.push({ id: 'coran-021', label: 'CORAN-021' });
+      if (hasAjuste) tabs.push({ id: 'ajuste', label: 'AJUSTE' });
+      outras.forEach(pos => tabs.push({ id: pos, label: pos }));
+      tabsEl.innerHTML = tabs.map(t =>
+        `<button class="pes-subtab${state.pesSubtab === t.id ? ' active' : ''}" onclick="setPesSubtab('${esc(t.id)}')">${esc(t.label)}</button>`
+      ).join('');
+    }
+
+    function setPesSubtab(id) {
+      state.pesSubtab = id;
+      state.pesTabSort = 'mais_velho';
+      state.pesTabModo = 'normal';
+      state.pesTabFiltroVenc = '';
+      renderMapaPES();
+    }
+
+    function setPesTabSort(v) { state.pesTabSort = v; renderMapaPES(); }
+    function setPesTabModo(v) { state.pesTabModo = v; renderMapaPES(); }
+    function setPesTabFiltroVenc(v) { state.pesTabFiltroVenc = v; renderMapaPES(); }
+
+    function renderMapaPES() {
+      const container = document.getElementById('estoque-content');
+      const meta = document.getElementById('meta-estoque');
+      buildPesSubtabs();
+
+      if (!state.estoque.length) {
+        meta.textContent = '';
+        container.innerHTML = `<div class="prompt-filtro"><div class="prompt-ico">📂</div><p>Nenhum dado de estoque importado.</p><small>Importe o CSV do PES acima.</small></div>`;
+        document.getElementById('mapa-view-toggle').style.display = 'none';
+        return;
+      }
+      meta.textContent = '';
+
+      // Filtros de busca para highlight no mapa
+      const f = getEstoqueFilters();
+      const searchTerm = (f.material || '').toLowerCase();
+
+      // Sub-tab ativa
+      const sub = state.pesSubtab;
+      const isJK = sub === 'jk';
+      document.getElementById('mapa-view-toggle').style.display = isJK ? '' : 'none';
+
+      if (!isJK) {
+        // Abas especiais: CORAN-021, AJUSTE, ou posição dinâmica
+        const posicao = sub === 'coran-021' ? 'CORAN-021' : sub === 'ajuste' ? 'AJUSTE' : sub;
+        const rows = state.estoque.filter(r => r.posicao === posicao);
+        container.innerHTML = buildSpecialTabSection(posicao, rows, searchTerm);
+        // Registrar no posDataMap para os event listeners
+        _posDataMap.clear();
+        rows.forEach(r => {
+          if (!_posDataMap.has(r.posicao)) _posDataMap.set(r.posicao, []);
+          _posDataMap.get(r.posicao).push(r);
+        });
+        attachPesEvents(container);
+        return;
+      }
+
+      // ─── Aba JK ───
+      const corrJ = state.estoque.filter(r => r.corredor === 'J' && r.nivel !== 1);
+      const corrK = state.estoque.filter(r => r.corredor === 'K' && r.nivel !== 1);
+      const corrJn1 = state.estoque.filter(r => r.corredor === 'J' && r.nivel === 1);
+      const corrKn1 = state.estoque.filter(r => r.corredor === 'K' && r.nivel === 1);
+
+      let html = `<div class="mapa-legenda">
+    <span style="font-size:11px;color:var(--text-muted);font-weight:600;margin-right:4px">Legenda:</span>
+    <span class="legenda-item"><span class="legenda-dot ok"></span>Estoque ok</span>
+    <span class="legenda-item"><span class="legenda-dot warn"></span>Vence em ≤30 dias</span>
+    <span class="legenda-item"><span class="legenda-dot crit"></span>Vencido / zerado</span>
+    <span class="legenda-item"><span class="legenda-dot empty"></span>Vaga vazia</span>
+  </div>`;
+
+      if (_fefoDirty) { _fefoCache = computeFefo(state.estoque); _fefoDirty = false; }
+      const fefoMap = _fefoCache;
+      state.fefoMap = fefoMap;
+      if (state.mapaView === 'preress') {
+        html += buildN1Section(corrJn1, corrKn1, searchTerm, fefoMap);
+      } else if (state.mapaView === 'expandida') {
+        html += buildCorredorExpandido('J', corrJ, searchTerm, fefoMap);
+        html += buildCorredorExpandido('K', corrK, searchTerm, fefoMap);
+      } else {
+        html += buildCorredorCompacta('J', corrJ, searchTerm, fefoMap);
+        html += buildCorredorCompacta('K', corrK, searchTerm, fefoMap);
+      }
+
+      // Armazenar dados no posDataMap para event delegation
+      _posDataMap.clear();
+      const allSections = [corrJ, corrK, corrJn1, corrKn1];
+      allSections.forEach(arr => arr.forEach(r => {
+        if (!_posDataMap.has(r.posicao)) _posDataMap.set(r.posicao, []);
+        _posDataMap.get(r.posicao).push(r);
+      }));
+
+      container.innerHTML = html;
+      attachPesEvents(container);
+    }
+
+    function attachPesEvents(container) {
+      if (container._pesEventsAttached) return;
+      container._pesEventsAttached = true;
+      let _matHlTimer = null;
+      container.addEventListener('click', e => {
+        const cell = e.target.closest('[data-posicao]');
+        if (!cell) return;
+        e.stopPropagation();
+        hideTooltip();
+        if (cell.classList.contains('n1-row')) {
+          const wrap = cell.parentElement;
+          const expand = wrap && wrap.querySelector('.n1-expand');
+          if (expand) {
+            const isOpen = expand.classList.contains('open');
+            expand.classList.toggle('open', !isOpen);
+            cell.classList.toggle('expanded', !isOpen);
+          }
+        } else if (cell.dataset.empty === '1') {
+          showEmptyDetailPopup(cell.dataset.posicao, cell);
+        } else if (cell.dataset.rows) {
+          showDetailPopup(cell.dataset.posicao, JSON.parse(cell.dataset.rows), cell);
+        }
+      });
+      container.addEventListener('mouseover', e => {
+        const cell = e.target.closest('[data-posicao][data-rows]');
+        if (!cell || cell.classList.contains('n1-row') || cell._ttBound) return;
+        cell._ttBound = true;
+        const posicao = cell.dataset.posicao;
+        const rows = JSON.parse(cell.dataset.rows);
+        showPesTooltip(e, posicao, rows);
+        const onLeave = () => { hideTooltip(); cell.removeEventListener('mouseleave', onLeave); cell._ttBound = false; };
+        cell.addEventListener('mouseleave', onLeave);
+      });
+      container.addEventListener('mouseover', e => {
+        const row = e.target.closest('.n1-row[data-material]');
+        if (!row || row._hlBound) return;
+        if (state.mapaView === 'preress') return;
+        row._hlBound = true;
+        const material = row.dataset.material;
+        clearTimeout(_matHlTimer);
+        _matHlTimer = setTimeout(() => {
+          container.classList.add('has-mat-hl');
+          container.querySelectorAll(`[data-material="${CSS.escape(material)}"]`).forEach(c => c.classList.add('mat-match'));
+        }, 500);
+        const onLeave = () => {
+          clearTimeout(_matHlTimer);
+          container.classList.remove('has-mat-hl');
+          container.querySelectorAll('.mat-match').forEach(c => c.classList.remove('mat-match'));
+          row.removeEventListener('mouseleave', onLeave); row._hlBound = false;
+        };
+        row.addEventListener('mouseleave', onLeave);
+      });
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * SEÇÃO DE ABA ESPECIAL (CORAN-021, AJUSTE, outras posições)
+     * ═══════════════════════════════════════════════════ */
+    function buildSpecialTabSection(posicao, rows, searchTerm) {
+      if (!rows.length) {
+        return `<div style="padding:24px 0;text-align:center;color:var(--text-muted)">
+      Nenhum material na posição <strong>${esc(posicao)}</strong>.</div>`;
+      }
+
+      const { pesTabSort, pesTabModo, pesTabFiltroVenc } = state;
+
+      let filtered = [...rows];
+      if (pesTabFiltroVenc === 'proximos') {
+        filtered = filtered.filter(r => { const d = daysUntil(r.data_vencimento); return d !== null && d >= 0 && d <= 30; });
+      } else if (pesTabFiltroVenc === 'vencidos') {
+        filtered = filtered.filter(r => { const d = daysUntil(r.data_vencimento); return d !== null && d < 0; });
+      }
+      if (searchTerm) {
+        filtered = filtered.filter(r => r._normSearch && r._normSearch.includes(searchTerm));
+      }
+
+      let cardsHtml = '';
+      if (pesTabModo === 'organizada') {
+        const grupos = {};
+        filtered.forEach(r => {
+          const g = String(r.material || '').slice(-3) || '???';
+          if (!grupos[g]) grupos[g] = [];
+          grupos[g].push(r);
+        });
+        cardsHtml = Object.keys(grupos).sort().map(g => {
+          const gRows = [...grupos[g]].sort((a, b) => {
+            const da = a.data_vencimento ? a.data_vencimento.getTime() : Infinity;
+            const db = b.data_vencimento ? b.data_vencimento.getTime() : Infinity;
+            return da - db;
+          });
+          return `<div class="mat-card-group">
+        <div class="mat-card-group-header">Grupo ${esc(g)} — ${gRows.length} item${gRows.length !== 1 ? 's' : ''}</div>
+        <div class="mat-card-grid">${gRows.map(r => buildSpecialTabCard(r, searchTerm)).join('')}</div>
+      </div>`;
+        }).join('');
+      } else {
+        filtered.sort((a, b) => {
+          const da = a.data_entrada ? a.data_entrada.getTime() : 0;
+          const db = b.data_entrada ? b.data_entrada.getTime() : 0;
+          return pesTabSort === 'mais_velho' ? da - db : db - da;
+        });
+        cardsHtml = `<div class="mat-card-grid">${filtered.map(r => buildSpecialTabCard(r, searchTerm)).join('')}</div>`;
+      }
+
+      const semEnd = rows.filter(r => { const d = daysAgo(r.data_entrada); return d !== null && d > 7; });
+      const pillSemEnd = semEnd.length ? `<span class="pill crit">⚠ ${semEnd.length} há mais de 7 dias</span>` : '';
+
+      const ctrlSort = `
+    <button class="tab-ctrl-btn${pesTabSort === 'mais_velho' ? ' active' : ''}" onclick="setPesTabSort('mais_velho')">⬆ Mais velho primeiro</button>
+    <button class="tab-ctrl-btn${pesTabSort === 'mais_novo' ? ' active' : ''}" onclick="setPesTabSort('mais_novo')">⬇ Mais novo primeiro</button>
+    <span class="tab-ctrl-sep">|</span>
+    <button class="tab-ctrl-btn${pesTabModo === 'organizada' ? ' active' : ''}" onclick="setPesTabModo(state.pesTabModo === 'organizada' ? 'normal' : 'organizada')">🗂 Organizada</button>
+    <span class="tab-ctrl-sep">|</span>
+    <select class="tab-ctrl-select" onchange="setPesTabFiltroVenc(this.value)">
+      <option value=""${pesTabFiltroVenc === '' ? ' selected' : ''}>Todos vencimentos</option>
+      <option value="proximos"${pesTabFiltroVenc === 'proximos' ? ' selected' : ''}>Vence em 30 dias</option>
+      <option value="vencidos"${pesTabFiltroVenc === 'vencidos' ? ' selected' : ''}>Vencidos</option>
+    </select>`;
+
+      return `
+    <div class="tab-controls">${ctrlSort}</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:12px;color:var(--text-sec)">${filtered.length} de ${rows.length} itens</span>
+      ${pillSemEnd}
+    </div>
+    ${cardsHtml}`;
+    }
+
+    function buildSpecialTabCard(r, searchTerm) {
+      const dias = daysAgo(r.data_entrada);
+      const days = daysUntil(r.data_vencimento);
+      const status = vencClass(r.data_vencimento);
+      const matchCls = searchTerm && (normStr(r.material).includes(searchTerm) || normStr(r.nome).includes(searchTerm)) ? ' highlight-match' : '';
+      const sgTag = softgelTag(r.material, r.nome, r.estoque, '');
+      const paradoBadge = (dias !== null && dias > 7)
+        ? `<div class="mc-parado"><span class="coran-sem-end-badge">⏱ ${dias}d sem end.</span></div>` : '';
+      let vencLabel = '—';
+      if (days !== null) {
+        if (days < 0) vencLabel = `Vencido há ${Math.abs(days)}d`;
+        else if (days === 0) vencLabel = 'Vence hoje';
+        else vencLabel = `+${days}d — ${fmtDate(r.data_vencimento)}`;
+      }
+      const rowData = esc(JSON.stringify([{
+        material: r.material, nome: r.nome, lote: r.lote,
+        estoque: r.estoque,
+        data_vencimento: r.data_vencimento ? r.data_vencimento.toISOString() : null
+      }]));
+      return `<div class="mat-card ${status}${matchCls}"
+      data-posicao="${esc(r.posicao)}"
+      data-rows="${rowData}">
+      <div class="mc-code-row">
+        <code class="mc-code">${esc(r.material || '—')}</code>
+        ${r.material ? `<button class="copy-btn" data-copy="${esc(r.material)}" title="Copiar">📋</button>` : ''}
+      </div>
+      <div class="mc-name">${esc(r.nome || '—')}</div>
+      <div class="mc-estoque-row">
+        <span class="mc-kg ${status}">${fmt(r.estoque)} kg</span>
+        ${sgTag || ''}
+      </div>
+      <div class="mc-lote-row">
+        <span class="mc-lote-label">Lote</span>
+        <span>${esc(r.lote || '—')}</span>
+        ${r.lote ? `<button class="copy-btn" data-copy="${esc(r.lote)}" title="Copiar">📋</button>` : ''}
+      </div>
+      ${paradoBadge}
+      <div class="mc-venc ${status}">${vencLabel}</div>
+    </div>`;
+    }
+
+    function buildCorredorSection(letra, rows, searchTerm, autoOpen) {
+      if (!rows.length) {
+        return `<div class="mapa-section">
+      <div class="mapa-section-head">
+        <span class="mapa-chevron">▶</span>
+        <span class="mapa-section-title">Corredor ${esc(letra)}</span>
+        <div class="mapa-section-pills"><span class="pill total">Sem dados</span></div>
+      </div>
+    </div>`;
+      }
+
+      // Agrupar por posição
+      const byPos = {};
+      rows.forEach(r => {
+        const key = r.posicao;
+        if (!byPos[key]) byPos[key] = [];
+        byPos[key].push(r);
+      });
+
+      // Descobrir range de níveis e slots
+      const niveis = [...new Set(rows.map(r => r.nivel).filter(v => v !== ''))].map(Number).sort((a, b) => b - a); // desc (top=maior)
+      const slots = [...new Set(rows.map(r => r.slot).filter(v => v))].map(Number).sort((a, b) => a - b);
+      const maxSlot = slots.length ? Math.max(...slots) : 0;
+      const allSlots = Array.from({ length: maxSlot }, (_, i) => i + 1);
+
+      // Stats
+      const totalMat = new Set(rows.map(r => r.material)).size;
+      const vagasOcup = Object.keys(byPos).length;
+      const vagasCrit = Object.values(byPos).filter(rs => rowsStatus(rs) === 'crit').length;
+      const vagasWarn = Object.values(byPos).filter(rs => rowsStatus(rs) === 'warn').length;
+
+      const pillCrit = vagasCrit ? `<span class="pill crit">⚠ ${vagasCrit} vencido${vagasCrit > 1 ? 's' : ''}</span>` : '';
+      const pillWarn = vagasWarn ? `<span class="pill warn">${vagasWarn} atenção</span>` : '';
+
+      // Eixo X (rótulos de slot)
+      const slotAxisHtml = `<div class="corredor-slot-axis">${allSlots.map(s => `<div class="corredor-slot-label">${String(s).padStart(3, '0')}</div>`).join('')}</div>`;
+
+      // Linhas do grid (nivel desc = topo primeiro)
+      const gridRows = niveis.map(nivel => {
+        const nivelStr = String(nivel).padStart(2, '0');
+        const cells = allSlots.map(slot => {
+          const slotStr = String(slot).padStart(3, '0');
+          const pos = `${letra}-${nivelStr}-${slotStr}`;
+          const posRows = byPos[pos];
+          if (!posRows || !posRows.length) {
+            return `<div class="pallet-cell empty"><span class="pallet-empty-label">${esc(pos)}</span></div>`;
+          }
+          const status = rowsStatus(posRows);
+          const primary = [...posRows].sort((a, b) => (daysUntil(a.data_vencimento) || 9999) - (daysUntil(b.data_vencimento) || 9999))[0];
+          const days = daysUntil(primary.data_vencimento);
+          const vencLabel = days !== null
+            ? (days < 0 ? `${Math.abs(days)}d venc.` : days === 0 ? 'hoje' : `+${days}d`)
+            : '';
+          const highlight = searchTerm && (
+            normStr(primary.material).includes(searchTerm) ||
+            normStr(primary.nome).includes(searchTerm) ||
+            normStr(primary.lote).includes(searchTerm)
+          ) ? ' highlight-match' : '';
+          const multiBadge = posRows.length > 1
+            ? `<div class="pallet-multi-badge">+${posRows.length - 1}</div>` : '';
+          const rowsData = esc(JSON.stringify(posRows.map(r => ({
+            material: r.material, nome: r.nome, lote: r.lote,
+            estoque: r.estoque, data_vencimento: r.data_vencimento ? r.data_vencimento.toISOString() : null
+          }))));
+          return `<div class="pallet-cell ${status}${highlight}"
+          data-posicao="${esc(pos)}"
+          data-rows="${rowsData}">
+        ${multiBadge}
+        <div class="pallet-pos">${esc(pos)}</div>
+        <div class="pallet-mat">${esc(primary.material)}${primary.material ? `<button class="copy-btn" data-copy="${esc(primary.material)}" title="Copiar">📋</button>` : ''}</div>
+        <div class="pallet-nome">${esc(primary.nome)}</div>
+        <div class="pallet-footer">
+          <span class="pallet-estoque">${fmt(primary.estoque)} kg</span>
+          <span class="pallet-venc">${esc(vencLabel)}</span>
+        </div>
+      </div>`;
+        }).join('');
+        return `<div class="corredor-row">
+      <div class="corredor-nivel-label">N${nivel}</div>
+      ${cells}
+    </div>`;
+      }).join('');
+
+      const openClass = autoOpen || vagasCrit > 0 ? 'open' : '';
+      return `<div class="mapa-section">
+    <div class="mapa-section-head ${openClass}" onclick="toggleMapaSection(this)">
+      <span class="mapa-chevron">▶</span>
+      <span class="mapa-section-title">Corredor ${esc(letra)}</span>
+      <div class="mapa-section-pills">
+        <span class="pill total">${totalMat} material${totalMat !== 1 ? 's' : ''}</span>
+        <span class="pill total">${vagasOcup} vaga${vagasOcup !== 1 ? 's' : ''} ocupada${vagasOcup !== 1 ? 's' : ''}</span>
+        ${pillWarn}${pillCrit}
+      </div>
+    </div>
+    <div class="mapa-section-body ${openClass}">
+      ${slotAxisHtml}
+      <div class="corredor-grid">${gridRows}</div>
+    </div>
+  </div>`;
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * IDENTIFICAÇÃO VISUAL DE MATERIAL (CORANTE / AROMA)
+     * ═══════════════════════════════════════════════════ */
+    // Nomes compostos verificados primeiro (mais específico → menos específico)
+    const CORANTE_COMPOSTOS = [
+      ['amarelo damasco', '#F59E0B'], ['amarelo gema', '#F59E0B'],
+      ['azul anis', '#3B82F6'], ['azul bebe', '#3B82F6'], ['azul jeans', '#3B82F6'],
+      ['azul marinho', '#3B82F6'], ['azul royal', '#3B82F6'], ['azul pirulito', '#3B82F6'],
+      ['verde folhas', '#22C55E'], ['verde hortela', '#22C55E'], ['verde limao', '#22C55E'],
+      ['verde musgo', '#22C55E'], ['verde escuro', '#22C55E'], ['verde claro', '#22C55E'],
+      ['vermelho morango', '#EF4444'], ['vermelho natal', '#EF4444'], ['vermelho noel', '#EF4444'],
+      ['rosa bebe', '#EC4899'], ['rosa cereja', '#EC4899'], ['rosa intenso', '#EC4899'],
+      ['super branco', '#E5E7EB'], ['branco leite', '#E5E7EB'],
+      ['preto intenso', '#78716C'],
+      ['vinho bordo', '#881337'],
+      ['roxo batata', '#8B5CF6'],
+      ['marrom chocolate', '#78716C'],
+    ];
+    // Nomes simples verificados depois
+    const CORANTE_SIMPLES = [
+      ['vermelho', '#EF4444'], ['rosa', '#EC4899'], ['pink', '#EC4899'],
+      ['azul', '#3B82F6'], ['verde', '#22C55E'], ['amarelo', '#F59E0B'],
+      ['branco', '#E5E7EB'], ['vinho', '#881337'], ['roxo', '#8B5CF6'], ['violeta', '#8B5CF6'],
+      ['preto', '#78716C'], ['laranja', '#F97316'], ['marrom', '#78716C'],
+      ['lilas', '#A78BFA'], ['turquesa', '#14B8A6'], ['cinza', '#6B7280'], ['salmao', '#FB923C'],
+    ];
+    const AROMA_EMOJIS = [
+      ['torta de limao', '🍋'], ['caramelo toffee', '🍮'], ['doce de leite', '🍮'],
+      ['leite condensado', '🍮'], ['frutas vermelhas', '🍓'], ['maca verde', '🍏'],
+      ['pipoca caramelizada', '🍿'], ['tutti frutti', '🍬'], ['pe de moleque', '🥜'],
+      ['pao de mel', '🍯'], ['licor de creme', '🥃'], ['maracuja', '🏝️'],
+      ['baunilha', '🍦'], ['morango', '🍓'], ['banana', '🍌'], ['coco', '🥥'],
+      ['chocolate', '🍫'], ['limao', '🍋'], ['cafe', '☕'], ['abacaxi', '🍍'],
+      ['cereja', '🍒'], ['menta', '🌿'], ['panetone', '🎄'],
+      ['nozes', '🥜'], ['avela', '🥜'], ['amendoa', '🥜'], ['pistache', '🥜'],
+      ['manteiga', '🌽'], ['milho verde', '🌽'],
+      ['whisky', '🥃'], ['cachaca', '🥃'], ['rum', '🥃'], ['trufa', '🍫'], ['laranja', '🍊'],
+    ];
+    function computeFefo(estoque) {
+      const byPos = {};
+      estoque.forEach(r => {
+        if (r.posicao === 'CORAN-021') return;
+        if (!byPos[r.posicao]) byPos[r.posicao] = [];
+        byPos[r.posicao].push(r);
+      });
+      const byMat = {};
+      Object.entries(byPos).forEach(([pos, rows]) => {
+        const primary = [...rows].sort((a, b) => {
+          const da = a.data_vencimento ? a.data_vencimento.getTime() : Infinity;
+          const db = b.data_vencimento ? b.data_vencimento.getTime() : Infinity;
+          return da - db;
+        })[0];
+        if (!byMat[primary.material]) byMat[primary.material] = [];
+        byMat[primary.material].push({ posicao: pos, venc: primary.data_vencimento });
+      });
+      const fefoMap = {};
+      Object.values(byMat).forEach(positions => {
+        if (positions.length < 2) return; // badge só faz sentido com >1 posição
+        positions.sort((a, b) => {
+          const da = a.venc ? a.venc.getTime() : Infinity;
+          const db = b.venc ? b.venc.getTime() : Infinity;
+          return da - db;
+        });
+        positions.forEach((p, i) => { fefoMap[p.posicao] = i + 1; });
+      });
+      return fefoMap;
+    }
+    function getPikInfo(material) {
+      const rows = _pikByMaterial.get(material);
+      if (!rows || !rows.length) return null;
+      const total = rows.reduce((s, r) => s + (r.estoque || 0), 0);
+      return { total, vagas: rows.length, rows };
+    }
+    function pikTagHtml(pikData, tagClass) {
+      if (!pikData) return `<span class="${tagClass} pik-none">📦 PIK: sem posição</span>`;
+      const summary = pikData.vagas === 1
+        ? `📦 PIK: ${fmt(pikData.total)} kg (${esc(pikData.rows[0].posicao || '—')})`
+        : `📦 PIK Total: ${fmt(pikData.total)} kg (em ${pikData.vagas} vagas)`;
+      const details = pikData.vagas > 1
+        ? pikData.rows.map(p => `<br><span style="font-size:10px;opacity:.65">${esc(p.posicao || '—')} — ${fmt(p.estoque)} kg</span>`).join('')
+        : '';
+      return `<span class="${tagClass} pik">${summary}${details}</span>`;
+    }
+
+    function hexA(hex, a) {
+      const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r},${g},${b},${a})`;
+    }
+    function matInfo(nome) {
+      let _c = _matInfoCache.get(nome);
+      if (_c) return _c;
+      _c = _matInfoCalc(nome);
+      _matInfoCache.set(nome, _c);
+      return _c;
+    }
+    function _matInfoCalc(nome) {
+      const n = normStr(nome);
+      const isCorante = /corante|mistura\s+de\s+corante|tint/.test(n);
+      const isAroma = !isCorante && /aroma|mix\b/.test(n);
+      if (isCorante) {
+        // Isola o prefixo antes do " - " (ex: "vermelho natal softgel" de "vermelho natal softgel - corante artif")
+        const sep = n.indexOf(' - ');
+        const prefix = sep >= 0 ? n.slice(0, sep).trim() : n;
+        // 1ª passagem: compostos startsWith (mais específico)
+        for (const [kw, color] of CORANTE_COMPOSTOS) {
+          if (prefix.startsWith(kw)) return { type: 'corante', color };
+        }
+        // 2ª passagem: simples startsWith (ex: VERMELHO NATAL → começa com VERMELHO)
+        for (const [kw, color] of CORANTE_SIMPLES) {
+          if (prefix.startsWith(kw)) return { type: 'corante', color };
+        }
+        // 3ª passagem: fallback includes em qualquer posição
+        for (const [kw, color] of CORANTE_COMPOSTOS) {
+          if (prefix.includes(kw)) return { type: 'corante', color };
+        }
+        for (const [kw, color] of CORANTE_SIMPLES) {
+          if (prefix.includes(kw)) return { type: 'corante', color };
+        }
+        return { type: 'corante', color: '#6B7280' };
+      }
+      if (isAroma) {
+        for (const [kw, emoji] of AROMA_EMOJIS) { if (n.includes(kw)) return { type: 'aroma', emoji }; }
+        return { type: 'aroma', emoji: '✨' };
+      }
+      return { type: 'neutro' };
+    }
+
+    function buildCorredorCompacta(letra, rows, searchTerm, fefoMap = {}) {
+      if (!rows.length) return buildCorredorSection(letra, rows, searchTerm, false);
+
+      const byPos = {};
+      rows.forEach(r => { if (!byPos[r.posicao]) byPos[r.posicao] = []; byPos[r.posicao].push(r); });
+
+      const niveis = [...new Set(rows.map(r => r.nivel).filter(v => v !== ''))].map(Number).sort((a, b) => b - a);
+      const maxSlot = Math.max(...rows.map(r => r.slot).filter(Boolean), 0);
+      const half = Math.ceil(maxSlot / 2);
+      const slotsDir = Array.from({ length: half }, (_, i) => i + 1);               // 001→016 (Lado Direito)
+      const slotsEsq = Array.from({ length: maxSlot - half }, (_, i) => maxSlot - i); // 032→017 (Lado Esquerdo)
+
+      const totalMat = new Set(rows.map(r => r.material)).size;
+      const vagasOcup = Object.keys(byPos).length;
+      const vagasCrit = Object.values(byPos).filter(rs => rowsStatus(rs) === 'crit').length;
+      const vagasWarn = Object.values(byPos).filter(rs => rowsStatus(rs) === 'warn').length;
+      const pillCrit = vagasCrit ? `<span class="pill crit">⚠ ${vagasCrit} vencido${vagasCrit > 1 ? 's' : ''}</span>` : '';
+      const pillWarn = vagasWarn ? `<span class="pill warn">${vagasWarn} atenção</span>` : '';
+
+      const makeCell = (nivel, slot) => {
+        const nivelStr = String(nivel).padStart(2, '0');
+        const slotStr = String(slot).padStart(3, '0');
+        const pos = `${letra}-${nivelStr}-${slotStr}`;
+        const posRows = byPos[pos];
+        if (!posRows?.length)
+          return `<div class="compact-cell empty" data-posicao="${esc(pos)}" data-empty="1"></div>`;
+        const status = rowsStatus(posRows);
+        const primary = [...posRows].sort((a, b) => (daysUntil(a.data_vencimento) || 9999) - (daysUntil(b.data_vencimento) || 9999))[0];
+        const rowsData = esc(JSON.stringify(posRows.map(r => ({
+          material: r.material, nome: r.nome, lote: r.lote, estoque: r.estoque,
+          data_entrada: r.data_entrada ? r.data_entrada.toISOString() : null,
+          data_vencimento: r.data_vencimento ? r.data_vencimento.toISOString() : null
+        }))));
+        const hiCls = searchTerm && normStr(primary.material + ' ' + primary.nome + ' ' + primary.lote).includes(searchTerm) ? ' highlight-match' : '';
+        const info = matInfo(primary.nome);
+        const matStyle = info.type === 'corante' ? ` style="background:#1a1f2e;border-left:4px solid ${info.color};box-shadow:inset 4px 0 12px ${hexA(info.color, 0.3)}"` : '';
+        const emoji = info.type === 'aroma' ? `<span class="mat-emoji">${info.emoji}</span>` : '';
+        const fefoNum = fefoMap[pos];
+        const fefoBadge = fefoNum ? `<span class="fefo-badge">${fefoNum}</span>` : '';
+        return `<div class="compact-cell ${status}${hiCls}"${matStyle} data-posicao="${esc(pos)}" data-material="${esc(primary.material)}" data-rows="${rowsData}">
+      ${fefoBadge}${emoji}<span class="compact-cell-slot">${slotStr}</span>
+      <span class="compact-cell-kg">${fmt(primary.estoque)}</span>
+    </div>`;
+      };
+
+      const levelsHtml = niveis.map(nivel => {
+        const cellsDir = slotsDir.map(slot => makeCell(nivel, slot)).join('');
+        const cellsEsq = slotsEsq.map(slot => makeCell(nivel, slot)).join('');
+        return `<div class="corredor-nivel-pair">
+      <div class="compact-level"><div class="compact-nivel-label">N${nivel}</div>${cellsDir}</div>
+      <div class="corredor-strip">
+        <div style="width:30px;flex-shrink:0"></div>
+        <span class="corredor-strip-lbl">Entrada ←</span>
+        <div class="corredor-strip-line"></div>
+        <span class="corredor-strip-lbl">→ Fundo</span>
+      </div>
+      <div class="compact-level"><div class="compact-nivel-label">N${nivel}</div>${cellsEsq}</div>
+    </div>`;
+      }).join('');
+
+      return `<div class="mapa-section">
+    <div class="mapa-section-head open" onclick="toggleMapaSection(this)">
+      <span class="mapa-chevron">▶</span>
+      <span class="mapa-section-title">Corredor ${esc(letra)}</span>
+      <div class="mapa-section-pills">
+        <span class="pill total">${totalMat} material${totalMat !== 1 ? 's' : ''}</span>
+        <span class="pill total">${vagasOcup} vaga${vagasOcup !== 1 ? 's' : ''} ocupada${vagasOcup !== 1 ? 's' : ''}</span>
+        ${pillWarn}${pillCrit}
+      </div>
+    </div>
+    <div class="mapa-section-body open">
+      <div class="corredor-side-label">▲ Lado Direito (001–0${String(half).padStart(2, '0')})</div>
+      <div class="corredor-duplo">${levelsHtml}</div>
+      <div class="corredor-side-label">▼ Lado Esquerdo (0${String(half + 1).padStart(2, '0')}–0${String(maxSlot).padStart(2, '0')})</div>
+    </div>
+  </div>`;
+    }
+
+    function buildCorredorIso(letra, rows, searchTerm) {
+      if (!rows.length) return buildCorredorSection(letra, rows, searchTerm, false);
+
+      const byPos = {};
+      rows.forEach(r => { if (!byPos[r.posicao]) byPos[r.posicao] = []; byPos[r.posicao].push(r); });
+
+      const niveis = [...new Set(rows.map(r => r.nivel).filter(v => v !== ''))].map(Number).sort((a, b) => b - a);
+      const maxSlot = Math.max(...rows.map(r => r.slot).filter(Boolean), 0);
+      const allSlots = Array.from({ length: maxSlot }, (_, i) => i + 1);
+
+      const totalMat = new Set(rows.map(r => r.material)).size;
+      const vagasOcup = Object.keys(byPos).length;
+      const vagasCrit = Object.values(byPos).filter(rs => rowsStatus(rs) === 'crit').length;
+      const vagasWarn = Object.values(byPos).filter(rs => rowsStatus(rs) === 'warn').length;
+      const pillCrit = vagasCrit ? `<span class="pill crit">⚠ ${vagasCrit} vencido${vagasCrit > 1 ? 's' : ''}</span>` : '';
+      const pillWarn = vagasWarn ? `<span class="pill warn">${vagasWarn} atenção</span>` : '';
+
+      // N1 (last in desc array) = maior Z (frente), N4 (first) = menor Z (fundo)
+      const levelsHtml = niveis.map((nivel, li) => {
+        const zDepth = li * 52; // N4=0px … N1=156px (frente)
+        const nivelStr = String(nivel).padStart(2, '0');
+        const cells = allSlots.map(slot => {
+          const slotStr = String(slot).padStart(3, '0');
+          const pos = `${letra}-${nivelStr}-${slotStr}`;
+          const posRows = byPos[pos];
+          if (!posRows?.length)
+            return `<div class="iso-cell empty" title="${pos}"><span class="iso-cell-pos">${slotStr}</span></div>`;
+          const status = rowsStatus(posRows);
+          const primary = posRows.sort((a, b) => (daysUntil(a.data_vencimento) || 9999) - (daysUntil(b.data_vencimento) || 9999))[0];
+          const rowsData = esc(JSON.stringify(posRows.map(r => ({
+            material: r.material, nome: r.nome, lote: r.lote,
+            estoque: r.estoque, data_vencimento: r.data_vencimento ? r.data_vencimento.toISOString() : null
+          }))));
+          const hiCls = searchTerm && (normStr(primary.material + ' ' + primary.nome + ' ' + primary.lote).includes(searchTerm)) ? ' highlight-match' : '';
+          return `<div class="iso-cell ${status}${hiCls}" data-posicao="${esc(pos)}" data-rows="${rowsData}">
+        <span class="iso-cell-pos">${slotStr}</span>
+        <span class="iso-cell-kg">${fmt(primary.estoque)}</span>
+      </div>`;
+        }).join('');
+        return `<div class="iso-level" style="--iso-z:${zDepth}px" data-nivel="${nivel}">
+      <div class="iso-nivel-label">N${nivel}</div>${cells}
+    </div>`;
+      }).join('');
+
+      return `<div class="mapa-section">
+    <div class="mapa-section-head open" onclick="toggleMapaSection(this)">
+      <span class="mapa-chevron">▶</span>
+      <span class="mapa-section-title">Corredor ${esc(letra)}</span>
+      <div class="mapa-section-pills">
+        <span class="pill total">${totalMat} material${totalMat !== 1 ? 's' : ''}</span>
+        <span class="pill total">${vagasOcup} vaga${vagasOcup !== 1 ? 's' : ''} ocupada${vagasOcup !== 1 ? 's' : ''}</span>
+        ${pillWarn}${pillCrit}
+      </div>
+    </div>
+    <div class="mapa-section-body open">
+      <div class="iso-scene">
+        <div class="iso-rack">${levelsHtml}</div>
+      </div>
+    </div>
+  </div>`;
+    }
+
+    function buildMiniMapa(corrJ, corrK, searchTerm) {
+      function buildSingle(letra, rows) {
+        if (!rows.length) {
+          return `<div class="mini-mapa-corredor">
+        <div class="mini-mapa-title">Corredor ${esc(letra)}</div>
+        <div style="font-size:11px;color:var(--text-muted);padding:4px 0">Sem dados</div>
+      </div>`;
+        }
+        const byPos = {};
+        rows.forEach(r => { if (!byPos[r.posicao]) byPos[r.posicao] = []; byPos[r.posicao].push(r); });
+        const niveis = [...new Set(rows.map(r => r.nivel).filter(v => v !== ''))].map(Number).sort((a, b) => b - a);
+        const maxSlot = Math.max(...rows.map(r => r.slot).filter(Boolean), 0);
+        const allSlots = Array.from({ length: maxSlot }, (_, i) => i + 1);
+
+        const vagasCrit = Object.values(byPos).filter(rs => rowsStatus(rs) === 'crit').length;
+        const vagasWarn = Object.values(byPos).filter(rs => rowsStatus(rs) === 'warn').length;
+        const statExt = (vagasCrit ? ` · <span style="color:var(--danger)">${vagasCrit} crit</span>` : '')
+          + (vagasWarn ? ` · <span style="color:var(--warning)">${vagasWarn} warn</span>` : '');
+
+        const axisHtml = allSlots.map(s =>
+          `<div class="mini-mapa-slot-label">${s % 4 === 0 ? String(s).padStart(3, '0') : ''}</div>`
+        ).join('');
+
+        const rowsHtml = niveis.map(nivel => {
+          const nivelStr = String(nivel).padStart(2, '0');
+          const cells = allSlots.map(slot => {
+            const slotStr = String(slot).padStart(3, '0');
+            const pos = `${letra}-${nivelStr}-${slotStr}`;
+            const posRows = byPos[pos];
+            if (!posRows?.length)
+              return `<div class="mini-cell empty" title="${pos}"></div>`;
+            const status = rowsStatus(posRows);
+            const primary = [...posRows].sort((a, b) => (daysUntil(a.data_vencimento) || 9999) - (daysUntil(b.data_vencimento) || 9999))[0];
+            const rowsData = esc(JSON.stringify(posRows.map(r => ({
+              material: r.material, nome: r.nome, lote: r.lote,
+              estoque: r.estoque, data_vencimento: r.data_vencimento ? r.data_vencimento.toISOString() : null
+            }))));
+            const hiCls = searchTerm && normStr(primary.material + ' ' + primary.nome + ' ' + primary.lote).includes(searchTerm) ? ' highlight-match' : '';
+            return `<div class="mini-cell ${status}${hiCls}" data-posicao="${esc(pos)}" data-rows="${rowsData}" onclick="goExpandida('${esc(pos)}')"></div>`;
+          }).join('');
+          return `<div class="mini-mapa-row">${cells}</div>`;
+        }).join('');
+
+        const labelHtml = niveis.map(n => `<div class="mini-mapa-nivel-label">N${n}</div>`).join('');
+
+        return `<div class="mini-mapa-corredor">
+      <div class="mini-mapa-title">Corredor ${esc(letra)} <span style="font-weight:400;font-size:11px;color:var(--text-muted)">${new Set(rows.map(r => r.material)).size} mat · ${Object.keys(byPos).length} ocup${statExt}</span></div>
+      <div class="mini-mapa-grid-wrap">
+        <div class="mini-mapa-level-labels">${labelHtml}</div>
+        <div class="mini-mapa-grid">
+          <div class="mini-mapa-slot-axis">${axisHtml}</div>
+          <div class="mini-mapa-rows">${rowsHtml}</div>
+        </div>
+      </div>
+    </div>`;
+      }
+      return `<div class="mini-mapa-wrapper">${buildSingle('J', corrJ)}${buildSingle('K', corrK)}</div>`;
+    }
+
+    function buildCorredorExpandido(letra, rows, searchTerm, fefoMap = {}) {
+      if (!rows.length) {
+        return `<div class="mapa-section">
+      <div class="mapa-section-head" onclick="toggleMapaSection(this)">
+        <span class="mapa-chevron">▶</span>
+        <span class="mapa-section-title">Corredor ${esc(letra)}</span>
+        <div class="mapa-section-pills"><span class="pill total">Sem dados</span></div>
+      </div>
+    </div>`;
+      }
+      const byPos = {};
+      rows.forEach(r => { if (!byPos[r.posicao]) byPos[r.posicao] = []; byPos[r.posicao].push(r); });
+      const niveis = [...new Set(rows.map(r => r.nivel).filter(v => v !== ''))].map(Number).sort((a, b) => b - a);
+      const maxSlot = Math.max(...rows.map(r => r.slot).filter(Boolean), 0);
+      const half = Math.ceil(maxSlot / 2);
+      const slotsDir = Array.from({ length: half }, (_, i) => i + 1);               // 001→016 (Lado Direito)
+      const slotsEsq = Array.from({ length: maxSlot - half }, (_, i) => maxSlot - i); // 032→017 (Lado Esquerdo)
+
+      const totalMat = new Set(rows.map(r => r.material)).size;
+      const vagasOcup = Object.keys(byPos).length;
+      const vagasCrit = Object.values(byPos).filter(rs => rowsStatus(rs) === 'crit').length;
+      const vagasWarn = Object.values(byPos).filter(rs => rowsStatus(rs) === 'warn').length;
+      const pillCrit = vagasCrit ? `<span class="pill crit">⚠ ${vagasCrit} vencido${vagasCrit > 1 ? 's' : ''}</span>` : '';
+      const pillWarn = vagasWarn ? `<span class="pill warn">${vagasWarn} atenção</span>` : '';
+
+      const slotAxisHtml = `<div class="expandida-slot-axis">${slotsDir.map(s =>
+        `<div class="expandida-slot-label">${String(s).padStart(3, '0')}</div>`
+      ).join('')}</div>`;
+
+      const makeCell = (nivel, slot) => {
+        const nivelStr = String(nivel).padStart(2, '0');
+        const slotStr = String(slot).padStart(3, '0');
+        const pos = `${letra}-${nivelStr}-${slotStr}`;
+        const posRows = byPos[pos];
+        if (!posRows?.length)
+          return `<div class="expandida-cell empty" data-posicao="${esc(pos)}" data-empty="1"></div>`;
+        const status = rowsStatus(posRows);
+        const primary = [...posRows].sort((a, b) => (daysUntil(a.data_vencimento) || 9999) - (daysUntil(b.data_vencimento) || 9999))[0];
+        const days = daysUntil(primary.data_vencimento);
+        const daysLbl = days !== null ? (days < 0 ? `${Math.abs(days)}d venc.` : days === 0 ? 'hoje' : `+${days}d`) : '';
+        const rowsData = esc(JSON.stringify(posRows.map(r => ({
+          material: r.material, nome: r.nome, lote: r.lote, estoque: r.estoque,
+          data_entrada: r.data_entrada ? r.data_entrada.toISOString() : null,
+          data_vencimento: r.data_vencimento ? r.data_vencimento.toISOString() : null
+        }))));
+        const hiCls = searchTerm && normStr(primary.material + ' ' + primary.nome + ' ' + primary.lote).includes(searchTerm) ? ' highlight-match' : '';
+        const focCls = state.expandedFocus === pos ? ' focused' : '';
+        const multi = posRows.length > 1 ? `<div class="pallet-multi-badge">+${posRows.length - 1}</div>` : '';
+        const info = matInfo(primary.nome);
+        const matStyle = info.type === 'corante' ? ` style="background:#1a1f2e;border-left:4px solid ${info.color};box-shadow:inset 4px 0 12px ${hexA(info.color, 0.3)}"` : '';
+        const emoji = info.type === 'aroma' ? `<span class="mat-emoji">${info.emoji}</span>` : '';
+        const fefoNum = fefoMap[pos];
+        const fefoBadge = fefoNum ? `<span class="fefo-badge">${fefoNum}</span>` : '';
+        return `<div class="expandida-cell ${status}${hiCls}${focCls}"${matStyle} data-posicao="${esc(pos)}" data-material="${esc(primary.material)}" data-rows="${rowsData}">
+      ${fefoBadge}${multi}${emoji}
+      <div class="exp-pos">${esc(pos)}</div>
+      <div class="exp-nome" title="${esc(primary.nome || primary.material || '—')}">${esc((primary.nome || primary.material || '—').split(' ').slice(0, 3).join(' '))}</div>
+      <div class="exp-kg">${fmt(primary.estoque)} kg</div>
+      <div class="exp-days">${esc(daysLbl)}</div>
+    </div>`;
+      };
+
+      const shelvesHtml = niveis.map(nivel => {
+        const cellsDir = slotsDir.map(slot => makeCell(nivel, slot)).join('');
+        const cellsEsq = slotsEsq.map(slot => makeCell(nivel, slot)).join('');
+        return `<div class="corredor-nivel-pair">
+      <div class="expandida-shelf">
+        <div class="expandida-shelf-bar"><span class="expandida-shelf-label">N${nivel}</span></div>
+        <div class="expandida-row">
+          <div class="expandida-nivel-label">N${nivel}</div>
+          <div class="expandida-cells">${cellsDir}</div>
+        </div>
+      </div>
+      <div class="corredor-strip">
+        <div style="width:46px;flex-shrink:0"></div>
+        <span class="corredor-strip-lbl">Entrada ←</span>
+        <div class="corredor-strip-line"></div>
+        <span class="corredor-strip-lbl">→ Fundo</span>
+      </div>
+      <div class="expandida-row">
+        <div class="expandida-nivel-label">N${nivel}</div>
+        <div class="expandida-cells">${cellsEsq}</div>
+      </div>
+    </div>`;
+      }).join('');
+
+      return `<div class="mapa-section">
+    <div class="mapa-section-head open" onclick="toggleMapaSection(this)">
+      <span class="mapa-chevron">▶</span>
+      <span class="mapa-section-title">Corredor ${esc(letra)}</span>
+      <div class="mapa-section-pills">
+        <span class="pill total">${totalMat} material${totalMat !== 1 ? 's' : ''}</span>
+        <span class="pill total">${vagasOcup} vaga${vagasOcup !== 1 ? 's' : ''} ocupada${vagasOcup !== 1 ? 's' : ''}</span>
+        ${pillWarn}${pillCrit}
+      </div>
+    </div>
+    <div class="mapa-section-body open">
+      <div class="corredor-side-label">▲ Lado Direito (001–0${String(half).padStart(2, '0')})</div>
+      ${slotAxisHtml}
+      <div class="corredor-duplo">${shelvesHtml}<div class="expandida-floor-bar"></div></div>
+      <div class="corredor-side-label">▼ Lado Esquerdo (0${String(half + 1).padStart(2, '0')}–0${String(maxSlot).padStart(2, '0')})</div>
+    </div>
+  </div>`;
+    }
+
+    /* ── GERENCIAMENTO DE BOLHAS ABERTAS (máx. 5) ── */
+    const _openPopups = [];
+    const MAX_OPEN_POPUPS = 5;
+
+    /* Retorna true se a posição já tem uma bolha aberta (impede duplicatas) */
+    function _posicaoJaAberta(posicao) {
+      return _openPopups.some(p => p._posicao === posicao && p.isConnected);
+    }
+
+    function _trackPopup(popup) {
+      _openPopups.push(popup);
+      if (_openPopups.length > MAX_OPEN_POPUPS) {
+        const oldest = _openPopups.shift();
+        // Limpar highlights da bolha mais antiga
+        if (oldest._mentionedCells) {
+          oldest._mentionedCells.forEach(c => {
+            c.classList.remove('popup-mentioned');
+            c.classList.remove('popup-hover-hl');
+          });
+        }
+        if (oldest.isConnected) oldest.remove();
+      }
+    }
+
+    function _untrackPopup(popup) {
+      const i = _openPopups.indexOf(popup);
+      if (i >= 0) _openPopups.splice(i, 1);
+    }
+
+    /* Marca células mencionadas numa bolha como .popup-mentioned e remove ao fechar */
+    function bindPopupCellHighlights(popup, mentionedCells) {
+      popup._mentionedCells = mentionedCells; // para cleanup ao fechar automaticamente
+      mentionedCells.forEach(c => c.classList.add('popup-mentioned'));
+      popup.querySelector('.detail-popup-close').addEventListener('click', () => {
+        mentionedCells.forEach(c => { c.classList.remove('popup-mentioned'); c.classList.remove('popup-hover-hl'); });
+      });
+    }
+
+    /* Ao hover numa linha [data-fefo-pos] da bolha, realça a célula correspondente no mapa */
+    function bindFefoRowHover(popup, containerEl) {
+      if (!containerEl) return;
+      popup.querySelectorAll('[data-fefo-pos]').forEach(row => {
+        const fp = row.dataset.fefoPos;
+        row.addEventListener('mouseenter', () => {
+          const cells = containerEl.querySelectorAll(`[data-posicao="${CSS.escape(fp)}"]`);
+          if (cells.length === 1) cells[0].classList.add('popup-hover-hl');
+        });
+        row.addEventListener('mouseleave', () => {
+          containerEl.querySelectorAll(`[data-posicao="${CSS.escape(fp)}"]`)
+            .forEach(c => c.classList.remove('popup-hover-hl'));
+        });
+      });
+    }
+
+    function showDetailPopup(posicao, rows, cellElement) {
+      if (_posicaoJaAberta(posicao)) return; // já existe bolha aberta para esta vaga
+      const material = rows[0]?.material;
+
+      const itemsHtml = rows.map(r => {
+        const d = r.data_vencimento ? new Date(r.data_vencimento) : null;
+        const entrada = r.data_entrada ? new Date(r.data_entrada) : null;
+        const days = daysUntil(d);
+        let vencTag = '';
+        if (days !== null) {
+          const cls = days < 0 ? 'crit' : days <= 30 ? 'warn' : 'ok';
+          const label = days < 0 ? `Vencido há ${Math.abs(days)}d` : days === 0 ? 'Vence hoje' : `Vence em ${days}d`;
+          vencTag = `<span class="tt-tag ${cls}">${label} — ${fmtDate(d)}</span>`;
+        }
+        const entradaTag = entrada ? `<span class="tt-tag">Entrada: ${fmtDate(entrada)}</span>` : '';
+        const pikData = getPikInfo(r.material);
+        const pikTag = pikTagHtml(pikData, 'tt-tag');
+        return `<div class="tt-item">
+      <div class="tt-mat">${esc(r.material)}<button class="copy-btn" data-copy="${esc(r.material)}" title="Copiar">📋</button></div>
+      <div class="tt-nome">${esc(r.nome)}</div>
+      <div class="tt-row">
+        <span class="tt-tag tt-lote">Lote: ${esc(r.lote || '—')}${r.lote ? `<button class="copy-btn" data-copy="${esc(r.lote)}" title="Copiar">📋</button>` : ''}</span>
+        <span class="tt-tag">${fmt(r.estoque)} kg</span>
+        ${softgelTag(r.material, r.nome, r.estoque, 'tt-tag')}
+        ${entradaTag}
+        ${vencTag}
+      </div>
+      <div class="tt-row">${pikTag}</div>
+    </div>`;
+      }).join('');
+
+      // Seção "Próximos lotes FEFO" com todas as vagas do mesmo material
+      const allMatRows = material ? state.estoque.filter(r => r.material === material) : [];
+      let fefoSection = '';
+      if (allMatRows.length > 0) {
+        const sorted = [...allMatRows].sort((a, b) => {
+          const da = a.data_vencimento ? a.data_vencimento.getTime() : Infinity;
+          const db = b.data_vencimento ? b.data_vencimento.getTime() : Infinity;
+          return da - db;
+        });
+        const fefoRows = sorted.map((r, i) => {
+          const fefoNum = i + 1;
+          const days = daysUntil(r.data_vencimento);
+          const daysCls = days === null ? '' : days < 0 ? 'crit' : days <= 30 ? 'warn' : 'ok';
+          const daysLbl = days === null ? '—' : days < 0 ? `${Math.abs(days)}d venc.` : days === 0 ? 'hoje' : `+${days}d`;
+          const isCur = r.posicao === posicao;
+          return `<div class="pik-pes-row${isCur ? ' fefo-current-row' : ''}" data-fefo-pos="${esc(r.posicao)}">
+        <span class="pik-pes-fefo">${fefoNum}º</span>
+        <span class="pik-pes-pos">${esc(r.posicao)}</span>
+        <span class="pik-pes-lote" title="${esc(r.lote || '')}">${esc(r.lote || '—')}${r.lote ? `<button class="copy-btn" data-copy="${esc(r.lote)}" title="Copiar" style="margin-left:3px;font-size:9px">📋</button>` : ''}</span>
+        <span class="pik-pes-kg">${fmt(r.estoque)} kg</span>
+        <span class="pik-pes-days ${daysCls}">${daysLbl}</span>
+      </div>`;
+        }).join('');
+        fefoSection = `<div class="pik-detail-section"><div class="pik-detail-title">📍 Próximos lotes FEFO — ${esc(material)}</div>${fefoRows}</div>`;
+      }
+
+      const popup = document.createElement('div');
+      popup.className = 'detail-popup visible';
+      popup.innerHTML = `
+    <div class="detail-popup-header">
+      <div class="tt-pos">${esc(posicao)}<button class="copy-btn" data-copy="${esc(posicao)}" title="Copiar">📋</button></div>
+      ${(state.fefoMap || {})[posicao] ? `<span class="fefo-popup-badge">FEFO ${(state.fefoMap || {})[posicao]}º</span>` : ''}
+      <button class="detail-popup-close">✕</button>
+    </div>
+    ${itemsHtml}${fefoSection}`;
+      popup._posicao = posicao;
+      document.body.appendChild(popup);
+      popup.querySelector('.detail-popup-close').addEventListener('click', () => { _untrackPopup(popup); popup.remove(); });
+      _trackPopup(popup);
+      bindCopyButtons(popup);
+      makeDraggable(popup);
+
+      // Realçar vagas mencionadas no mapa
+      const pesContainer = document.getElementById('estoque-content');
+      const pikContainer = document.getElementById('picking-content');
+      const mentionedCells = [];
+      if (pesContainer) {
+        allMatRows.forEach(r => {
+          const cells = pesContainer.querySelectorAll(`[data-posicao="${CSS.escape(r.posicao)}"]`);
+          if (cells.length === 1) mentionedCells.push(cells[0]);
+        });
+      }
+      const pikData = getPikInfo(material);
+      if (pikData && pikContainer) {
+        pikData.rows.forEach(r => {
+          const cells = pikContainer.querySelectorAll(`[data-posicao="${CSS.escape(r.posicao)}"]`);
+          if (cells.length === 1) mentionedCells.push(cells[0]);
+        });
+      }
+      bindPopupCellHighlights(popup, mentionedCells);
+      bindFefoRowHover(popup, pesContainer);
+
+      // Posicionar ao lado da célula clicada
+      const cRect = cellElement.getBoundingClientRect();
+      const pw = popup.offsetWidth || 300;
+      let x = cRect.right + 10;
+      let y = cRect.top;
+      if (x + pw > window.innerWidth - 8) x = cRect.left - pw - 10;
+      if (x < 8) x = 8;
+      popup.style.left = x + 'px';
+      popup.style.top = y + 'px';
+      requestAnimationFrame(() => {
+        const ph = popup.offsetHeight;
+        let ny = cRect.top;
+        if (ny + ph > window.innerHeight - 8) ny = window.innerHeight - ph - 8;
+        if (ny < 8) ny = 8;
+        popup.style.top = ny + 'px';
+      });
+    }
+    function showEmptyDetailPopup(posicao, cellElement) {
+      if (_posicaoJaAberta(posicao)) return; // já existe bolha aberta para esta vaga
+      const popup = document.createElement('div');
+      popup.className = 'detail-popup visible';
+      popup.innerHTML = `
+    <div class="detail-popup-header">
+      <div class="tt-pos">${esc(posicao)}<button class="copy-btn" data-copy="${esc(posicao)}" title="Copiar">📋</button></div>
+      <button class="detail-popup-close">✕</button>
+    </div>
+    <div class="tt-item">
+      <div class="tt-mat" style="color:var(--text-muted)">Vaga vazia</div>
+      <div class="tt-nome" style="color:var(--text-muted);margin-top:4px">Sem material alocado</div>
+    </div>`;
+      popup._posicao = posicao;
+      document.body.appendChild(popup);
+      popup.querySelector('.detail-popup-close').addEventListener('click', () => { _untrackPopup(popup); popup.remove(); });
+      _trackPopup(popup);
+      bindCopyButtons(popup);
+      makeDraggable(popup);
+      const cRect = cellElement.getBoundingClientRect();
+      const pw = popup.offsetWidth || 300;
+      let x = cRect.right + 10;
+      let y = cRect.top;
+      if (x + pw > window.innerWidth - 8) x = cRect.left - pw - 10;
+      if (x < 8) x = 8;
+      popup.style.left = x + 'px';
+      popup.style.top = y + 'px';
+      requestAnimationFrame(() => {
+        const ph = popup.offsetHeight;
+        let ny = cRect.top;
+        if (ny + ph > window.innerHeight - 8) ny = window.innerHeight - ph - 8;
+        if (ny < 8) ny = 8;
+        popup.style.top = ny + 'px';
+      });
+    }
+
+    function makeDraggable(popup) {
+      const handle = popup.querySelector('.detail-popup-header') || popup;
+      let startX, startY, startL, startT;
+      handle.addEventListener('mousedown', e => {
+        if (e.target.closest('.detail-popup-close')) return; // não arrastar pelo ✕
+        e.preventDefault();
+        startX = e.clientX; startY = e.clientY;
+        startL = parseInt(popup.style.left) || 0;
+        startT = parseInt(popup.style.top) || 0;
+        popup.classList.add('dragging');
+        popup.style.zIndex = ++_dragZ;
+        function onMove(e) {
+          let nx = startL + (e.clientX - startX);
+          let ny = startT + (e.clientY - startY);
+          // Manter dentro da viewport
+          nx = Math.max(0, Math.min(nx, window.innerWidth - popup.offsetWidth));
+          ny = Math.max(0, Math.min(ny, window.innerHeight - popup.offsetHeight));
+          popup.style.left = nx + 'px';
+          popup.style.top = ny + 'px';
+        }
+        function onUp() {
+          popup.classList.remove('dragging');
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    }
+    let _dragZ = 500;
+
+    function closeDetailPopup() {
+      _openPopups.forEach(p => { if (p.isConnected) p.remove(); });
+      _openPopups.length = 0;
+      document.querySelectorAll('.detail-popup.visible').forEach(p => p.remove());
+    }
+
+    function bindCopyButtons(popup) {
+      popup.querySelectorAll('.copy-btn[data-copy]').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(btn.dataset.copy).then(() => {
+            const orig = btn.textContent;
+            btn.textContent = '✓';
+            btn.style.color = 'var(--success)'; btn.style.opacity = '1';
+            setTimeout(() => { btn.textContent = orig; btn.style.color = ''; btn.style.opacity = ''; }, 1000);
+          }).catch(() => { });
+        });
+      });
+    }
+
+    // Delegação global para .copy-btn fora de popups (tabelas, cards, expand)
+    document.addEventListener('click', e => {
+      const btn = e.target.closest('.copy-btn[data-copy]');
+      if (!btn || btn._copyBound) return;
+      e.stopPropagation();
+      navigator.clipboard.writeText(btn.dataset.copy).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✓';
+        btn.style.color = 'var(--success)'; btn.style.opacity = '1';
+        setTimeout(() => { btn.textContent = orig; btn.style.color = ''; btn.style.opacity = ''; }, 1000);
+      }).catch(() => { });
+    });
+
+    function buildN1Section(corrJn1, corrKn1, searchTerm, fefoMap) {
+      const allN1 = [...corrJn1, ...corrKn1];
+      if (!allN1.length) return '';
+
+      function buildSides(letra, rowsN1) {
+        if (!rowsN1.length) return { dirHtml: '<div style="font-size:11px;color:var(--text-muted);padding:4px 0">Sem dados</div>', esqHtml: '', crit: 0, warn: 0, mat: 0 };
+
+        const byPos = {};
+        rowsN1.forEach(r => { if (!byPos[r.posicao]) byPos[r.posicao] = []; byPos[r.posicao].push(r); });
+
+        const maxSlot = Math.max(...rowsN1.map(r => r.slot).filter(Boolean), 32);
+        const half = Math.ceil(maxSlot / 2);
+        const slotsDir = Array.from({ length: half }, (_, i) => i + 1);          // 001→016
+        const slotsEsq = Array.from({ length: maxSlot - half }, (_, i) => half + i + 1);   // 017→032
+
+        const makeRow = (slot, idx) => {
+          const slotStr = String(slot).padStart(3, '0');
+          const pos = `${letra}-01-${slotStr}`;
+          const posRows = byPos[pos];
+          if (!posRows?.length) return '';
+          const status = rowsStatus(posRows);
+          const primary = [...posRows].sort((a, b) => (daysUntil(a.data_vencimento) || 9999) - (daysUntil(b.data_vencimento) || 9999))[0];
+          const days = daysUntil(primary.data_vencimento);
+          const daysLbl = days !== null ? (days < 0 ? `${Math.abs(days)}d venc.` : days === 0 ? 'hoje' : `+${days}d`) : '—';
+          const rowsData = esc(JSON.stringify(posRows.map(r => ({
+            material: r.material, nome: r.nome, lote: r.lote, estoque: r.estoque,
+            data_entrada: r.data_entrada ? r.data_entrada.toISOString() : null,
+            data_vencimento: r.data_vencimento ? r.data_vencimento.toISOString() : null
+          }))));
+          const hiCls = searchTerm && normStr(primary.material + ' ' + primary.nome + ' ' + primary.lote).includes(searchTerm) ? ' highlight-match' : '';
+          const info = matInfo(primary.nome);
+          const matStyle = info.type === 'corante'
+            ? ` style="border-left:4px solid ${info.color};box-shadow:inset 4px 0 10px ${hexA(info.color, 0.25)}"`
+            : '';
+          const fefoNum = fefoMap[pos];
+          const fefoHtml = fefoNum ? `<span class="n1-fefo">${fefoNum}</span>` : '';
+
+          // Conteúdo do accordion
+          const expandItems = posRows.map(r => {
+            const rInfo = matInfo(r.nome);
+            const d = r.data_vencimento ? new Date(r.data_vencimento) : null;
+            const rDays = daysUntil(d);
+            const vCls = rDays === null ? '' : rDays < 0 ? 'crit' : rDays <= 30 ? 'warn' : 'ok';
+            const vLbl = rDays === null ? '' : rDays < 0
+              ? `Vencido há ${Math.abs(rDays)}d (${fmtDate(d)})`
+              : rDays === 0 ? `Vence hoje (${fmtDate(d)})`
+                : `Vence em ${rDays}d (${fmtDate(d)})`;
+            const swatchStyle = rInfo.type === 'corante'
+              ? `background:${rInfo.color}`
+              : rInfo.type === 'aroma'
+                ? `background:var(--bg-card);border:1px solid var(--border);text-align:center;line-height:14px;font-size:11px`
+                : `background:var(--bg-card);border:1px solid var(--border)`;
+            const swatchContent = rInfo.type === 'aroma' ? rInfo.emoji : '';
+            const emojiPrefix = rInfo.type === 'aroma' ? rInfo.emoji + ' ' : '';
+            const pikRaw = getPikInfo(r.material);
+            const pikTag = (() => {
+              if (!pikRaw) return `<span class="n1-expand-tag pik-none">sem PIK</span>`;
+              const byPos = {};
+              pikRaw.rows.forEach(p => { byPos[p.posicao || '—'] = (byPos[p.posicao || '—'] || 0) + (p.estoque || 0); });
+              return Object.entries(byPos)
+                .map(([pos, kg]) => `<span class="n1-expand-tag pik">${esc(pos)} ${fmt(kg)} kg</span>`)
+                .join('');
+            })();
+            return `<div class="n1-expand-item">
+          <div class="n1-expand-swatch" style="${swatchStyle}">${swatchContent}</div>
+          <div class="n1-expand-col">
+            <span class="n1-expand-mat">${emojiPrefix}${esc(r.material)}${r.material ? `<button class="copy-btn" data-copy="${esc(r.material)}" title="Copiar">📋</button>` : ''}</span>
+            <span class="n1-expand-nome" title="${esc(r.nome)}">${esc(r.nome || '—')}</span>
+            <div class="n1-expand-tags">
+              <span class="n1-expand-tag">${fmt(r.estoque)} kg</span>
+              <span class="n1-expand-tag">Lote: ${esc(r.lote || '—')}</span>
+              ${vLbl ? `<span class="n1-expand-tag ${vCls}">${esc(vLbl)}</span>` : ''}
+              ${pikTag}
+            </div>
+          </div>
+        </div>`;
+          }).join('');
+
+          return `<div class="n1-row-wrap">
+        <div class="n1-row ${status}${hiCls}"${matStyle} data-posicao="${esc(pos)}" data-material="${esc(primary.material)}" data-rows="${rowsData}">
+          <span class="n1-row-num">${idx}</span>
+          <span class="n1-row-pos">${esc(pos)}</span>
+          <span class="n1-row-kg">${fmt(primary.estoque)} kg</span>
+          ${softgelTag(primary.material, primary.estoque, '')}
+          ${fefoHtml}
+          <span class="n1-row-days">${esc(daysLbl)}</span>
+        </div>
+        <div class="n1-expand">${expandItems}</div>
+      </div>`;
+        };
+
+        let dIdx = 0;
+        const rowsDirHtml = slotsDir.map(slot => {
+          const sl = String(slot).padStart(3, '0');
+          if (!byPos[`${letra}-01-${sl}`]?.length) return '';
+          return makeRow(slot, ++dIdx);
+        }).join('');
+
+        let eIdx = 0;
+        const rowsEsqHtml = slotsEsq.map(slot => {
+          const sl = String(slot).padStart(3, '0');
+          if (!byPos[`${letra}-01-${sl}`]?.length) return '';
+          return makeRow(slot, ++eIdx);
+        }).join('');
+
+        const dirLabel = `Lado Direito (001–0${String(half).padStart(2, '0')})`;
+        const esqLabel = `Lado Esquerdo (0${String(half + 1).padStart(2, '0')}–0${String(maxSlot).padStart(2, '0')})`;
+
+        const noData = '<span style="font-size:11px;color:var(--text-muted)">Sem vagas ocupadas</span>';
+        const dirHtml = `<div class="n1-side-header">${dirLabel}</div><div class="n1-list">${rowsDirHtml || noData}</div>`;
+        const esqHtml = `<div class="n1-side-header">${esqLabel}</div><div class="n1-list">${rowsEsqHtml || noData}</div>`;
+
+        const crit = Object.values(byPos).filter(rs => rowsStatus(rs) === 'crit').length;
+        const warn = Object.values(byPos).filter(rs => rowsStatus(rs) === 'warn').length;
+        const mat = new Set(rowsN1.map(r => r.material)).size;
+        return { dirHtml, esqHtml, crit, warn, mat };
+      }
+
+      const colJ = buildSides('J', corrJn1);
+      const colK = buildSides('K', corrKn1);
+      const totalMat = colJ.mat + colK.mat;
+      const vagasCrit = colJ.crit + colK.crit;
+      const vagasWarn = colJ.warn + colK.warn;
+      const pillCrit = vagasCrit ? `<span class="pill crit">⚠ ${vagasCrit} vencido${vagasCrit > 1 ? 's' : ''}</span>` : '';
+      const pillWarn = vagasWarn ? `<span class="pill warn">${vagasWarn} atenção</span>` : '';
+
+      const jBlock = `<div class="n1-corredor-block">
+    <div class="n1-corredor-block-title">Corredor J</div>
+    <div class="n1-sides">
+      <div>${colJ.dirHtml}</div>
+      <div>${colJ.esqHtml}</div>
+    </div>
+  </div>`;
+      const kBlock = corrKn1.length ? `<div class="n1-corredor-block">
+    <div class="n1-corredor-block-title">Corredor K</div>
+    <div class="n1-sides">
+      <div>${colK.dirHtml}</div>
+      <div>${colK.esqHtml}</div>
+    </div>
+  </div>` : '';
+
+      return `<div class="mapa-section">
+    <div class="mapa-section-head open" onclick="toggleMapaSection(this)">
+      <span class="mapa-chevron">▶</span>
+      <span class="mapa-section-title">Nível 1 — Pré-Ressuprimento</span>
+      <div class="mapa-section-pills">
+        <span class="pill total">${totalMat} material${totalMat !== 1 ? 's' : ''}</span>
+        ${pillWarn}${pillCrit}
+      </div>
+    </div>
+    <div class="mapa-section-body open">
+      ${jBlock}${kBlock}
+    </div>
+  </div>`;
+    }
+
+    function toggleMapaSection(head) {
+      head.classList.toggle('open');
+      head.nextElementSibling.classList.toggle('open');
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * PICKING PIK
+     * ═══════════════════════════════════════════════════ */
+    function renderPikFamFilterPills() {
+      const wrap = document.getElementById('pikFamFilterWrap');
+      if (!wrap) return;
+      const pills = FAMILY_DEFS.map(f => {
+        const active = state.pikFamilyFilter.has(f.key) ? ' active' : '';
+        return `<span class="fam-filter-pill${active}" onclick="togglePikFamily('${f.key}',this)">${f.label}</span>`;
+      }).join('');
+      wrap.innerHTML = pills + `<button class="btn-clear" style="align-self:center" onclick="clearPickingFilters()">Limpar</button>`;
+    }
+    function togglePikFamily(key, el) {
+      if (state.pikFamilyFilter.has(key)) {
+        state.pikFamilyFilter.delete(key);
+        el.classList.remove('active');
+      } else {
+        state.pikFamilyFilter.add(key);
+        el.classList.add('active');
+      }
+      renderPicking();
+    }
+    function getPickingFilters() {
+      return { families: state.pikFamilyFilter };
+    }
+    function clearPickingFilters() {
+      state.pikFamilyFilter.clear();
+      document.querySelectorAll('.fam-filter-pill').forEach(p => p.classList.remove('active'));
+      renderPicking();
+    }
+
+    /* ── PIK MAP: estrutura dos corredores ── */
+    const PIK_CORREDORES_BASE = [
+      { id: 'PF', maxSlot: 56, duplo: true },
+      // PG é inserido dinamicamente em renderPicking() com base nos dados
+      { id: 'PH', maxSlot: 51, duplo: true },
+      { id: 'PI', maxSlot: 17, duplo: false },
+    ];
+
+    function buildPikAxis(slots) {
+      return `<div class="pik-axis-row">${slots.map(s => {
+        const lbl = (s % 10 === 0 || s === 1 || s === slots[slots.length - 1])
+          ? String(s).padStart(3, '0') : '';
+        return `<div class="pik-axis-cell">${lbl}</div>`;
+      }).join('')}</div>`;
+    }
+
+    function buildPikCell(corridorId, slot, byPos, posTotal, familyFilter) {
+      const slotStr = String(slot).padStart(3, '0');
+      const pos = `${corridorId}-01-${slotStr}`;
+      const posRows = byPos[pos];
+
+      if (!posRows || !posRows.length) {
+        return `<div class="pik-cell no-data"><span class="pik-cell-slot">${slotStr}</span></div>`;
+      }
+
+      const total = posTotal[pos] || 0;
+      const thr = getCorredorThreshold(corridorId);
+      const status = total === 0 ? 'pik-zero' : total <= thr ? 'pik-warn' : 'pik-ok';
+      const kgTxt = total > 0 ? fmt(total) : '∅';
+
+      // Family filter (dim, not hide)
+      const famMatch = !familyFilter.size || posRows.some(r => familyFilter.has(getMaterialFamily(r.material)));
+      const dimCls = !famMatch ? ' pik-dim' : '';
+      const hiCls = (familyFilter.size && famMatch) ? ' highlight-match' : '';
+
+      const rowsData = esc(JSON.stringify(posRows.map(r => ({
+        material: r.material, nome: r.nome, lote: r.lote, estoque: r.estoque, posicao: r.posicao,
+        data_entrada: r.data_entrada ? r.data_entrada.toISOString() : null,
+        data_vencimento: r.data_vencimento ? r.data_vencimento.toISOString() : null,
+      }))));
+
+      return `<div class="pik-cell ${status}${dimCls}${hiCls}" data-posicao="${esc(pos)}" data-rows="${rowsData}">
+    <span class="pik-cell-slot">${slotStr}</span>
+    <span class="pik-cell-kg">${kgTxt}</span>
+  </div>`;
+    }
+
+    function buildPikCorredorSection(cfg, byPos, posTotal, familyFilter) {
+      const { id, maxSlot, duplo } = cfg;
+      const allSlots = Array.from({ length: maxSlot }, (_, i) => i + 1);
+      const half = Math.ceil(maxSlot / 2);
+      const slotsA = allSlots.slice(0, half);
+      const slotsB = [...allSlots.slice(half)].reverse();   // espelhado
+
+      // Stats
+      const corrThr = getCorredorThreshold(id);
+      let cntOk = 0, cntWarn = 0, cntZero = 0, cntData = 0;
+      allSlots.forEach(s => {
+        const pos = `${id}-01-${String(s).padStart(3, '0')}`;
+        if (!byPos[pos]) return;
+        cntData++;
+        const t = posTotal[pos] || 0;
+        if (t === 0) cntZero++;
+        else if (t <= corrThr) cntWarn++;
+        else cntOk++;
+      });
+      const pillTotal = `<span class="pill total">${cntData} vaga${cntData !== 1 ? 's' : ''}</span>`;
+      const pillWarn = cntWarn ? `<span class="pill warn">${cntWarn} atenção</span>` : '';
+      const pillCrit = cntZero ? `<span class="pill crit">⚠ ${cntZero} crítico${cntZero > 1 ? 's' : ''}</span>` : '';
+      const pillThr = `<span class="pik-thr-pill" onclick="event.stopPropagation();editCorredorThresh('${esc(id)}',this)">≤ <span class="pik-thr-val">${corrThr}</span> kg</span>`;
+
+      const makeRow = slots => `<div class="pik-row">${slots.map(s => buildPikCell(id, s, byPos, posTotal, familyFilter)).join('')}</div>`;
+
+      let bodyHtml;
+      if (!duplo) {
+        // PI — linha única
+        bodyHtml = `
+      <div class="pik-side-label">${id} — linha única (${maxSlot} vagas)</div>
+      ${buildPikAxis(allSlots)}
+      ${makeRow(allSlots)}`;
+      } else {
+        // PF / PH — dois lados espelhados
+        const stripHtml = `<div class="pik-corredor-strip">
+      <span class="pik-corredor-strip-lbl">← Corredor ${id} →</span>
+      <div class="pik-corredor-strip-line"></div>
+    </div>`;
+        bodyHtml = `
+      <div class="pik-side-label">Lado A — 001 a ${String(half).padStart(3, '0')}</div>
+      ${buildPikAxis(slotsA)}
+      ${makeRow(slotsA)}
+      ${stripHtml}
+      ${makeRow(slotsB)}
+      ${buildPikAxis([...slotsB].reverse())}
+      <div class="pik-side-label">Lado B — ${String(half + 1).padStart(3, '0')} a ${String(maxSlot).padStart(3, '0')}</div>`;
+      }
+
+      return `<div class="mapa-section">
+    <div class="mapa-section-head open" onclick="toggleMapaSection(this)">
+      <span class="mapa-chevron">▶</span>
+      <span class="mapa-section-title" style="font-family:monospace">${esc(id)}</span>
+      <div class="mapa-section-pills">${pillTotal}${pillWarn}${pillCrit}${pillThr}</div>
+    </div>
+    <div class="mapa-section-body open" style="overflow-x:auto">
+      ${bodyHtml}
+    </div>
+  </div>`;
+    }
+
+    function showPikTooltip(e, posicao, rows) {
+      const total = rows.reduce((s, r) => s + (r.estoque || 0), 0);
+      const itemsHtml = rows.map(r => {
+        const daysIn = r.data_entrada ? Math.floor((Date.now() - new Date(r.data_entrada).getTime()) / 86400000) : null;
+        const days = daysUntil(r.data_vencimento ? new Date(r.data_vencimento) : null);
+        let vencTag = '';
+        if (days !== null) {
+          const cls = days < 0 ? 'crit' : days <= 30 ? 'warn' : 'ok';
+          const label = days < 0 ? `Vencido há ${Math.abs(days)}d` : days === 0 ? 'Vence hoje' : `Vence em ${days}d`;
+          vencTag = `<span class="tt-tag ${cls}">${label}</span>`;
+        }
+        return `<div class="tt-item">
+      <div class="tt-mat">${esc(r.material)}</div>
+      <div class="tt-nome">${esc(r.nome)}</div>
+      <div class="tt-row">
+        <span class="tt-tag">${fmt(r.estoque)} kg</span>
+        <span class="tt-tag">Lote: ${esc(r.lote || '—')}</span>
+        ${daysIn !== null ? `<span class="tt-tag">${daysIn}d na vaga</span>` : ''}
+        ${vencTag}
+      </div>
+    </div>`;
+      }).join('');
+      const _sfx0 = String(rows[0]?.material || '').slice(-3);
+      const _allSame = rows.every(r => String(r.material || '').slice(-3) === _sfx0);
+      const _unTT = (_allSame && rows[0]?.material) ? calcUnidades(rows[0].material, rows[0].nome, total) : null;
+      _tt.innerHTML = `
+    <div class="tt-pos">${esc(posicao)}</div>
+    <div style="font-size:10px;color:var(--warning);margin-bottom:4px;font-weight:700">Total: ${fmt(total)} kg${_unTT !== null ? ' ≈ ' + _unTT.toLocaleString('pt-BR') + ' un' : ''}</div>
+    ${itemsHtml}`;
+      _showTT();
+      moveTooltip(e);
+    }
+
+    function showPikDetailPopup(posicao, rows, cellEl) {
+      if (_posicaoJaAberta(posicao)) return; // já existe bolha aberta para esta vaga
+      const total = rows.reduce((s, r) => s + (r.estoque || 0), 0);
+      const material = rows[0]?.material;
+      const pesRows = material ? state.estoque.filter(r => r.material === material) : [];
+
+      const pikItems = rows.map(r => {
+        const dIn = r.data_entrada ? new Date(r.data_entrada) : null;
+        const dVnc = r.data_vencimento ? new Date(r.data_vencimento) : null;
+        const daysIn = dIn ? Math.floor((Date.now() - dIn.getTime()) / 86400000) : null;
+        const days = daysUntil(dVnc);
+        const cls = days === null ? '' : days < 0 ? 'crit' : days <= 30 ? 'warn' : 'ok';
+        const vLabel = days === null ? '' : days < 0 ? `Vencido há ${Math.abs(days)}d` : days === 0 ? 'Vence hoje' : `Vence em ${days}d`;
+        return `<div class="tt-item">
+      <div class="tt-mat">${esc(r.material)}<button class="copy-btn" data-copy="${esc(r.material)}" title="Copiar">📋</button></div>
+      <div class="tt-nome">${esc(r.nome)}</div>
+      <div class="tt-row">
+        <span class="tt-tag">${fmt(r.estoque)} kg</span>
+        <span class="tt-tag tt-lote">Lote: ${esc(r.lote || '—')}${r.lote ? `<button class="copy-btn" data-copy="${esc(r.lote)}" title="Copiar">📋</button>` : ''}</span>
+        ${daysIn !== null ? `<span class="tt-tag">${daysIn}d na vaga</span>` : ''}
+        ${vLabel ? `<span class="tt-tag ${cls}">${vLabel}</span>` : ''}
+      </div>
+    </div>`;
+      }).join('');
+
+      const _sfxP0 = String(rows[0]?.material || '').slice(-3);
+      const _allSameP = rows.every(r => String(r.material || '').slice(-3) === _sfxP0);
+      const _unPopup = (_allSameP && rows[0]?.material) ? calcUnidades(rows[0].material, rows[0].nome, total) : null;
+      const totalBadge = `<span style="font-size:11px;font-weight:800;color:var(--warning)">Total: ${fmt(total)} kg${_unPopup !== null ? ' ≈ ' + _unPopup.toLocaleString('pt-BR') + ' un' : ''}</span>`;
+
+      let pesSection = '';
+      if (pesRows.length) {
+        // Ordenar por FEFO: vencimento mais próximo primeiro, sem vencimento por último
+        const sorted = [...pesRows].sort((a, b) => {
+          const da = a.data_vencimento ? a.data_vencimento.getTime() : Infinity;
+          const db = b.data_vencimento ? b.data_vencimento.getTime() : Infinity;
+          return da - db;
+        });
+        const MAX_PES = 10;
+        const pesItems = sorted.slice(0, MAX_PES).map((r, i) => {
+          const fefoNum = i + 1;
+          const days = daysUntil(r.data_vencimento);
+          const daysCls = days === null ? '' : days < 0 ? 'crit' : days <= 30 ? 'warn' : 'ok';
+          const daysLbl = days === null ? '—'
+            : days < 0 ? `${Math.abs(days)}d venc.`
+              : days === 0 ? 'hoje'
+                : `+${days}d`;
+          return `<div class="pik-pes-row" data-fefo-pos="${esc(r.posicao)}">
+        <span class="pik-pes-fefo">${fefoNum}º</span>
+        <span class="pik-pes-pos">${esc(r.posicao)}</span>
+        <span class="pik-pes-lote" title="${esc(r.lote || '')}">${esc(r.lote || '—')}${r.lote ? `<button class="copy-btn" data-copy="${esc(r.lote)}" title="Copiar" style="margin-left:3px;font-size:9px">📋</button>` : ''}</span>
+        <span class="pik-pes-kg">${fmt(r.estoque)} kg</span>
+        <span class="pik-pes-days ${daysCls}">${daysLbl}</span>
+      </div>`;
+        }).join('');
+        const pesExtra = sorted.length > MAX_PES
+          ? `<div style="font-size:10px;color:var(--text-muted);margin-top:4px">+${sorted.length - MAX_PES} posições</div>` : '';
+        pesSection = `<div class="pik-detail-section"><div class="pik-detail-title">📦 No estoque PES</div>${pesItems}${pesExtra}</div>`;
+      } else if (state.estoque.length) {
+        pesSection = `<div class="pik-detail-section"><div style="font-size:10px;color:var(--text-muted)">Sem dados PES para este material</div></div>`;
+      }
+
+      const popup = document.createElement('div');
+      popup.className = 'detail-popup visible';
+      popup.innerHTML = `
+    <div class="detail-popup-header">
+      <div class="tt-pos">${esc(posicao)}<button class="copy-btn" data-copy="${esc(posicao)}" title="Copiar">📋</button></div>
+      <button class="detail-popup-close">✕</button>
+    </div>
+    <div style="margin-bottom:6px">${totalBadge}</div>
+    ${pikItems}${pesSection}`;
+      popup._posicao = posicao;
+      document.body.appendChild(popup);
+      popup.querySelector('.detail-popup-close').addEventListener('click', () => { _untrackPopup(popup); popup.remove(); });
+      _trackPopup(popup);
+      bindCopyButtons(popup);
+      makeDraggable(popup);
+
+      // Realçar vagas mencionadas no mapa
+      const pesContainerPik = document.getElementById('estoque-content');
+      const pikContainerPik = document.getElementById('picking-content');
+      const mentionedCellsPik = [];
+      if (pikContainerPik) {
+        const pikCell = pikContainerPik.querySelector(`[data-posicao="${CSS.escape(posicao)}"]`);
+        if (pikCell) mentionedCellsPik.push(pikCell);
+      }
+      if (pesContainerPik) {
+        pesRows.forEach(r => {
+          const cells = pesContainerPik.querySelectorAll(`[data-posicao="${CSS.escape(r.posicao)}"]`);
+          if (cells.length === 1) mentionedCellsPik.push(cells[0]);
+        });
+      }
+      bindPopupCellHighlights(popup, mentionedCellsPik);
+      bindFefoRowHover(popup, pesContainerPik);
+
+      const cRect = cellEl.getBoundingClientRect();
+      const pw = popup.offsetWidth || 300;
+      let x = cRect.right + 10, y = cRect.top;
+      if (x + pw > window.innerWidth - 8) x = cRect.left - pw - 10;
+      if (x < 8) x = 8;
+      popup.style.left = x + 'px'; popup.style.top = y + 'px';
+      requestAnimationFrame(() => {
+        const ph = popup.offsetHeight;
+        let ny = y;
+        if (ny + ph > window.innerHeight - 8) ny = window.innerHeight - ph - 8;
+        if (ny < 8) ny = 8;
+        popup.style.top = ny + 'px';
+      });
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * PIK CORREDOR COM NÍVEIS (PE, PD)
+     * ═══════════════════════════════════════════════════ */
+    function _buildPikNivelBody(id, byPos, posTotal, familyFilter) {
+      const prefix = id + '-';
+      const allPositions = Object.keys(byPos).filter(p => p.startsWith(prefix));
+      if (!allPositions.length) return null;
+
+      const nivelSet = new Set();
+      let maxSlot = 0;
+      allPositions.forEach(pos => {
+        const parts = pos.split('-');
+        nivelSet.add(parseInt(parts[1], 10));
+        const s = parseInt(parts[2], 10);
+        if (s > maxSlot) maxSlot = s;
+      });
+      const niveis = [...nivelSet].sort((a, b) => b - a);
+      const allSlots = Array.from({ length: maxSlot }, (_, i) => i + 1);
+
+      const corrThr = getCorredorThreshold(id);
+      let cntOk = 0, cntWarn = 0, cntZero = 0, cntData = 0;
+      allPositions.forEach(pos => {
+        cntData++;
+        const t = posTotal[pos] || 0;
+        if (t === 0) cntZero++;
+        else if (t <= corrThr) cntWarn++;
+        else cntOk++;
+      });
+
+      const axisHtml = `<div class="pik-axis-row" style="padding-left:36px">${allSlots.map(s => {
+        const lbl = (s % 10 === 0 || s === 1 || s === allSlots[allSlots.length - 1])
+          ? String(s).padStart(3, '0') : '';
+        return `<div class="pik-axis-cell">${lbl}</div>`;
+      }).join('')}</div>`;
+
+      const levelsHtml = niveis.map(nivel => {
+        const nivelStr = String(nivel).padStart(2, '0');
+        const cells = allSlots.map(slot => {
+          const slotStr = String(slot).padStart(3, '0');
+          const pos = `${id}-${nivelStr}-${slotStr}`;
+          const posRows = byPos[pos];
+          if (!posRows || !posRows.length) {
+            return `<div class="pik-cell no-data"><span class="pik-cell-slot" style="font-size:8px">${slotStr}</span></div>`;
+          }
+          const total = posTotal[pos] || 0;
+          const status = total === 0 ? 'pik-zero' : total <= corrThr ? 'pik-warn' : 'pik-ok';
+          const kgTxt = total > 0 ? fmt(total) : '∅';
+          const famMatch = !familyFilter.size || posRows.some(r => familyFilter.has(getMaterialFamily(r.material)));
+          const dimCls = !famMatch ? ' pik-dim' : '';
+          const hiCls = (familyFilter.size && famMatch) ? ' highlight-match' : '';
+          const rowsData = esc(JSON.stringify(posRows.map(r => ({
+            material: r.material, nome: r.nome, lote: r.lote, estoque: r.estoque, posicao: r.posicao,
+            data_entrada: r.data_entrada ? r.data_entrada.toISOString() : null,
+            data_vencimento: r.data_vencimento ? r.data_vencimento.toISOString() : null,
+          }))));
+          return `<div class="pik-cell ${status}${dimCls}${hiCls}" data-posicao="${esc(pos)}" data-rows="${rowsData}">
+        <span class="pik-cell-slot" style="font-size:8px">${slotStr}</span>
+        <span class="pik-cell-kg">${kgTxt}</span>
+      </div>`;
+        }).join('');
+        return `<div style="display:flex;align-items:center;gap:3px;margin-bottom:3px">
+      <div style="width:32px;flex-shrink:0;font-size:10px;font-weight:700;color:var(--text-muted);font-family:monospace;text-align:right;padding-right:4px">N${nivel}</div>
+      <div class="pik-row">${cells}</div>
+    </div>`;
+      }).join('');
+
+      return { axisHtml, levelsHtml, cntData, cntWarn, cntZero, corrThr };
+    }
+
+    function buildPikNivelCombinedSection(ids, byPos, posTotal, familyFilter) {
+      const parts = ids.map(id => ({ id, data: _buildPikNivelBody(id, byPos, posTotal, familyFilter) }))
+        .filter(p => p.data !== null);
+      if (!parts.length) return '';
+
+      const totalData = parts.reduce((s, p) => s + p.data.cntData, 0);
+      const totalWarn = parts.reduce((s, p) => s + p.data.cntWarn, 0);
+      const totalZero = parts.reduce((s, p) => s + p.data.cntZero, 0);
+
+      const pillTotal = `<span class="pill total">${totalData} vaga${totalData !== 1 ? 's' : ''}</span>`;
+      const pillWarn = totalWarn ? `<span class="pill warn">${totalWarn} atenção</span>` : '';
+      const pillCrit = totalZero ? `<span class="pill crit">⚠ ${totalZero} crítico${totalZero > 1 ? 's' : ''}</span>` : '';
+
+      const colsHtml = parts.map(p => {
+        const thrPill = `<span class="pik-thr-pill" onclick="event.stopPropagation();editCorredorThresh('${esc(p.id)}',this)">≤ <span class="pik-thr-val">${p.data.corrThr}</span> kg</span>`;
+        return `<div style="flex:0 0 auto;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border-sub)">
+        <span style="font-family:monospace;font-weight:700;font-size:13px">${esc(p.id)}</span>
+        ${thrPill}
+      </div>
+      ${p.data.axisHtml}
+      ${p.data.levelsHtml}
+    </div>`;
+      }).join('<div style="width:24px;flex:0 0 24px;border-left:1px solid var(--border-sub);margin:0 4px"></div>');
+
+      const title = parts.map(p => p.id).join(' / ');
+      return `<div class="mapa-section">
+    <div class="mapa-section-head open" onclick="toggleMapaSection(this)">
+      <span class="mapa-chevron">▶</span>
+      <span class="mapa-section-title" style="font-family:monospace">${esc(title)}</span>
+      <div class="mapa-section-pills">${pillTotal}${pillWarn}${pillCrit}</div>
+    </div>
+    <div class="mapa-section-body open" style="overflow-x:auto">
+      <div style="display:flex;align-items:flex-start;gap:0">${colsHtml}</div>
+    </div>
+  </div>`;
+    }
+
+    function attachPikEvents(container) {
+      if (container._pikEventsAttached) return;
+      container._pikEventsAttached = true;
+      container.addEventListener('click', e => {
+        const cell = e.target.closest('.pik-cell[data-rows]');
+        if (!cell) return;
+        e.stopPropagation();
+        hideTooltip();
+        showPikDetailPopup(cell.dataset.posicao, JSON.parse(cell.dataset.rows), cell);
+      });
+      container.addEventListener('mouseover', e => {
+        const cell = e.target.closest('.pik-cell[data-rows]');
+        if (!cell || cell._ttBound) return;
+        cell._ttBound = true;
+        showPikTooltip(e, cell.dataset.posicao, JSON.parse(cell.dataset.rows));
+        const onLeave = () => { hideTooltip(); cell.removeEventListener('mouseleave', onLeave); cell._ttBound = false; };
+        cell.addEventListener('mouseleave', onLeave);
+      });
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * TABELA DE TODAS AS VAGAS PIK
+     * ═══════════════════════════════════════════════════ */
+    function setPikVagasSort(col) {
+      if (state.pikVagasSort.col === col) {
+        state.pikVagasSort.dir = state.pikVagasSort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.pikVagasSort = { col, dir: col === 'total' ? 'desc' : 'asc' };
+      }
+      renderPicking();
+    }
+
+    function buildPikVagasTable(byPos, posTotal) {
+      const { col, dir } = state.pikVagasSort;
+      const allPos = Object.keys(byPos);
+      if (!allPos.length) return '';
+
+      // Montar linhas
+      let rows = allPos.map(pos => {
+        const posRows = byPos[pos];
+        const total = posTotal[pos] || 0;
+        const mat = posRows[0]?.material || '';
+        const nome = posRows[0]?.nome || '';
+        const lote = posRows[0]?.lote || '—';
+        const corredor = pos.split('-')[0] || pos;
+        const thr = getFamilyThreshold(mat);
+        const status = total === 0 ? 'zero' : total <= thr ? 'warn' : 'ok';
+        return { pos, mat, nome, lote, total, corredor, status, posRows };
+      });
+
+      // Ordenar
+      rows.sort((a, b) => {
+        let va, vb;
+        if (col === 'total') { va = a.total; vb = b.total; }
+        else if (col === 'corredor') { va = a.corredor; vb = b.corredor; }
+        else if (col === 'status') {
+          const ord = { zero: 0, warn: 1, ok: 2 };
+          va = ord[a.status]; vb = ord[b.status];
+        } else { va = normStr(a.pos); vb = normStr(b.pos); }
+        if (typeof va === 'number') return dir === 'asc' ? va - vb : vb - va;
+        if (va < vb) return dir === 'asc' ? -1 : 1;
+        if (va > vb) return dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      const arw = c => c === col ? (dir === 'asc' ? ' ▲' : ' ▼') : '';
+      const thBtn = (c, label) =>
+        `<th style="cursor:pointer;user-select:none" onclick="setPikVagasSort('${c}')">${label}${arw(c)}</th>`;
+
+      const rowsHtml = rows.map(r => {
+        const statusBadge = r.status === 'zero'
+          ? `<span class="pill crit" style="font-size:10px">∅ vazia</span>`
+          : r.status === 'warn'
+            ? `<span class="pill warn" style="font-size:10px">⚠ baixo</span>`
+            : `<span class="pill ok" style="font-size:10px">ok</span>`;
+        const sgTag = r.mat ? softgelTag(r.mat, r.nome, r.total, '') : '';
+        return `<tr>
+      <td><span class="vaga-code" style="font-size:11px">${esc(r.pos)}</span></td>
+      <td style="font-size:11px;color:var(--text-muted)">${esc(r.corredor)}</td>
+      <td>${r.mat ? `<code style="font-size:11px;color:var(--text-sec)">${esc(r.mat)}</code><button class="copy-btn" data-copy="${esc(r.mat)}" title="Copiar">📋</button>` : '<span style="color:var(--text-muted);font-size:11px">— vazia —</span>'}</td>
+      <td><span class="nome-material" title="${esc(r.nome)}">${esc(r.nome || '—')}</span></td>
+      <td><span class="${estoqueClass(r.total, r.mat)}">${r.total > 0 ? fmt(r.total) + ' kg' : '—'}</span>${sgTag ? ` ${sgTag}` : ''}</td>
+      <td><span style="font-family:monospace;font-size:11px">${esc(r.lote)}</span></td>
+      <td>${statusBadge}</td>
+    </tr>`;
+      }).join('');
+
+      return `<div class="pik-vagas-section">
+    <div class="pik-vagas-head">
+      <span class="pik-vagas-title">📋 Todas as Vagas PIK (${rows.length})</span>
+    </div>
+    <div class="tbl-wrap"><div class="tbl-scroll"><table>
+      <thead><tr>
+        ${thBtn('posicao', 'Posição')}
+        ${thBtn('corredor', 'Corredor')}
+        <th>Material</th><th>Nome</th>
+        ${thBtn('total', 'Peso (kg)')}
+        <th>Lote</th>
+        ${thBtn('status', 'Status')}
+      </tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table></div></div>
+  </div>`;
+    }
+
+    function renderPicking() {
+      const container = document.getElementById('picking-content');
+      renderPikFamFilterPills();
+      if (!state.picking.length) {
+        container.innerHTML = `<div class="prompt-filtro"><div class="prompt-ico">🏷️</div><p>Nenhum dado de picking importado.</p><small>Importe o CSV do PIK acima.</small></div>`;
+        return;
+      }
+      const f = getPickingFilters();
+
+      // Total por posição PIK (todos os lotes)
+      const posTotal = {};
+      state.picking.forEach(r => { posTotal[r.posicao] = (posTotal[r.posicao] || 0) + (r.estoque || 0); });
+
+      // byPos para acesso rápido
+      const byPos = {};
+      state.picking.forEach(r => { if (!byPos[r.posicao]) byPos[r.posicao] = []; byPos[r.posicao].push(r); });
+
+      // Detectar corredores dinâmicos pela planilha PIK
+      function detectMaxSlot(prefix) {
+        const slots = Object.keys(byPos)
+          .filter(p => new RegExp(`^${prefix}-\\d+-(\\d+)$`).test(p))
+          .map(p => parseInt(p.split('-')[2], 10))
+          .filter(n => !isNaN(n));
+        return slots.length ? Math.max(...slots) : 0;
+      }
+      const pgMaxSlot = detectMaxSlot('PG');
+      const peMaxSlot = detectMaxSlot('PE');
+      const pdMaxSlot = detectMaxSlot('PD');
+
+      const corridores = [
+        { id: 'PF', maxSlot: 56, duplo: true },
+        ...(pgMaxSlot > 0 ? [{ id: 'PG', maxSlot: pgMaxSlot, duplo: false }] : []),
+        { id: 'PH', maxSlot: 51, duplo: true },
+        { id: 'PI', maxSlot: 17, duplo: false },
+        ...(peMaxSlot > 0 ? [{ id: 'PE', maxSlot: peMaxSlot, duplo: true }] : []),
+        ...(pdMaxSlot > 0 ? [{ id: 'PD', maxSlot: pdMaxSlot, duplo: true }] : []),
+      ];
+
+      const hasPE = peMaxSlot > 0, hasPD = pdMaxSlot > 0;
+      const mapHtml = [
+        ...corridores
+          .filter(cfg => cfg.id !== 'PE' && cfg.id !== 'PD')
+          .map(cfg => buildPikCorredorSection(cfg, byPos, posTotal, f.families)),
+        (hasPE || hasPD) ? buildPikNivelCombinedSection(
+          [...(hasPE ? ['PE'] : []), ...(hasPD ? ['PD'] : [])],
+          byPos, posTotal, f.families
+        ) : '',
+      ].join('');
+
+      const vagasHtml = buildPikVagasTable(byPos, posTotal);
+
+      container.innerHTML = `<div class="pik-map-wrap">${mapHtml}</div>` + vagasHtml;
+      attachPikEvents(container);
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * PIK SUB-TABS
+     * ═══════════════════════════════════════════════════ */
+    const _pikSubtabs = ['corredores', 'planejamento'];
+
+    function setPikSubtab(id) {
+      document.querySelectorAll('#pik-subtabs .pes-subtab').forEach(btn => {
+        btn.classList.toggle('active', btn.id === 'pik-tab-' + id);
+      });
+      _pikSubtabs.forEach(k => {
+        const el = document.getElementById('pik-pane-' + k);
+        if (el) el.style.display = k === id ? '' : 'none';
+      });
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * TABS
+     * ═══════════════════════════════════════════════════ */
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + name));
+    }
+
+    /* ═══════════════════════════════════════════════════
+     * RENDER ALL
+     * ═══════════════════════════════════════════════════ */
+    function renderAll() {
+      renderDashboard();
+      renderPesView();
+      renderPicking();
+    }
+
+    // Init
+    renderAll();
+  </script>
+</body>
+
+</html>
